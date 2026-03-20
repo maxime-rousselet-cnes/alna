@@ -1,0 +1,12 @@
+black
+ipykernel
+isort
+matplotlib
+numpy==1.26.4
+pydantic
+pylint
+pytest
+scipy
+setuptools
+sympy
+tqdm

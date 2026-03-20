@@ -1,0 +1,88 @@
+{
+    "layer_names": [
+        "LOWER_MANTLE",
+        "UPPER_MANTLE",
+        "MANTLE_ASTHENOSPHERE",
+        "MANTLE_LITHOSPHERE",
+        "CRUST"
+    ],
+    "r_limits": [
+        3480000.0,
+        5701000.0,
+        6071000.0,
+        6271000.0,
+        6346600.0,
+        6371000.0
+    ],
+    "optional_crust_values": null,
+    "polynomials": {
+        "eta_m": [
+            [
+                3e21
+            ],
+            [
+                3e20
+            ],
+            [
+                3e19
+            ],
+            [
+                "inf"
+            ],
+            [
+                "inf"
+            ]
+        ],
+        "eta_k": [
+            [
+                "inf"
+            ],
+            [
+                "inf"
+            ],
+            [
+                3e18
+            ],
+            [
+                "inf"
+            ],
+            [
+                "inf"
+            ]
+        ],
+        "mu_k1": [
+            [
+                0.0
+            ],
+            [
+                0.0
+            ],
+            [
+                0.0
+            ],
+            [
+                0.0
+            ],
+            [
+                0.0
+            ]
+        ],
+        "c": [
+            [
+                0.0
+            ],
+            [
+                0.0
+            ],
+            [
+                1.0
+            ],
+            [
+                0.0
+            ],
+            [
+                0.0
+            ]
+        ]
+    }
+}

@@ -1,0 +1,42 @@
+{
+    "model": {
+        "component_parameters": {
+            "viscous_component": true,
+            "transient_component": true,
+            "bounded_attenuation_functions": true
+        },
+        "optional_crust_values": false,
+        "radius_unit": null,
+        "structure_parameters": {
+            "dynamic_term": true,
+            "below_icb_layers": null,
+            "below_cmb_layers": null,
+            "asymptotic_compressibility": false,
+            "drho_dx_epsilon": 1.0e-10
+        }
+    },
+    "degree_discretization": {
+        "steps": [
+            1,
+            2,
+            5
+        ],
+        "thresholds": [
+            1,
+            20,
+            40,
+            100
+        ]
+    },
+        "integration_parameters": {
+            "high_degrees_radius_sensibility": 1.0e-4,
+            "minimal_radius": 1.0e3,
+            "atol": 1.0e-14,
+            "rtol": 1.0e-10
+        },
+    "options": {
+        "model_id": null,
+        "save": true,
+        "overwrite_model": false
+    }
+}
