@@ -1,8 +1,10 @@
+base_models
 black
 ipykernel
 isort
 matplotlib
-numpy==1.26.4
+mpmath
+numpy
 pydantic
 pylint
 pytest

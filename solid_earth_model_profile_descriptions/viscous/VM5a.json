@@ -20,7 +20,7 @@
     ],
     "optional_crust_values": null,
     "polynomials": {
-        "eta_m": [
+        "\\eta_m": [
             [
                 3.16e21
             ],

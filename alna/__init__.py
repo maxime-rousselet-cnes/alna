@@ -2,7 +2,17 @@
 Anelastic Love Number Algorithm
 """
 
-from .constants import SOLID_EARTH_MODEL_PROFILE_DESCRIPTIONS_PATH
-from .solid_earth_model import SolidEarthModelDescription
+from .parameters import DEFAULT_COMPONENT_PARAMETERS, SolidEarthParameters
+from .solid_earth_model import (
+    SolidEarthModelDescription,
+    SolidEarthNumericalModel,
+    load_solid_earth_numerical_model,
+)
 
-to_import = [SOLID_EARTH_MODEL_PROFILE_DESCRIPTIONS_PATH, SolidEarthModelDescription]
+to_import = [
+    DEFAULT_COMPONENT_PARAMETERS,
+    SolidEarthParameters,
+    SolidEarthModelDescription,
+    SolidEarthNumericalModel,
+    load_solid_earth_numerical_model,
+]

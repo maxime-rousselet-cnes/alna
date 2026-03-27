@@ -10,7 +10,7 @@
     ],
     "optional_crust_values": null,
     "polynomials": {
-        "omega_m": [
+        "\\omega_m^{inf}": [
             [
                 0.000309
             ],
@@ -18,7 +18,7 @@
                 0.0
             ]
         ],
-        "alpha": [
+        "\\alpha": [
             [
                 0.26
             ],
@@ -26,7 +26,7 @@
                 0.0
             ]
         ],
-        "asymptotic_mu_ratio": [
+        "\\Delta": [
             [
                 0.15
             ],

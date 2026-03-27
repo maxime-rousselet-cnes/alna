@@ -16,7 +16,7 @@
     ],
     "optional_crust_values": null,
     "polynomials": {
-        "eta_m": [
+        "\\eta_m": [
             [
                 3e21
             ],
@@ -33,7 +33,7 @@
                 "inf"
             ]
         ],
-        "eta_k": [
+        "\\eta_k": [
             [
                 "inf"
             ],
@@ -50,7 +50,7 @@
                 "inf"
             ]
         ],
-        "mu_k1": [
+        "\\mu_{k1}": [
             [
                 0.0
             ],

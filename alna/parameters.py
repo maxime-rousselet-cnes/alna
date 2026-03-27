@@ -14,12 +14,12 @@ class ComponentParameters(BaseModel):
     Elasticity is not optional.
     """
 
-    viscous_component: bool = True
-    transient_component: bool = True
+    viscous_component: bool = False
+    transient_component: bool = False
     # Unbounded attenuation functions can be used in the transient component to check consistency
     # with specific short-term Love numbers litterature. However, they produce non-physical values
     # at long-term.
-    bounded_attenuation_functions: bool = True
+    bounded_attenuation_functions: bool = False
 
 
 DEFAULT_COMPONENT_PARAMETERS = ComponentParameters()
@@ -34,9 +34,9 @@ class StructureParameters(BaseModel):
     # Number of layers under boundaries. If they are None: Automatic detection using elasticity
     # model layer names.
     # Number of layers under the Inner-Core Boundary.
-    below_icb_layers: Optional[int] = None  # Should be >= 0.
+    i_layer_icb: Optional[int] = None  # Should be >= 0.
     # Number of total layers under the Mantle-Core Boundary.
-    below_cmb_layers: Optional[int] = None  # Should be >= below_ICB_layers.
+    i_layer_cmb: Optional[int] = None  # Should be >= i_layer_icb.
     asymptotic_compressibility: bool = False
     drho_dx_epsilon: float = (
         1.0e-10  # Limit under which incompressibility is assumed (for Lithosphere mainly).
@@ -93,18 +93,6 @@ class SolidEarthModelParameters(BaseModel):
 DEFAULT_SOLID_EARTH_MODEL_PARAMETERS = SolidEarthModelParameters()
 
 
-class DegreeDiscretizationParameters(BaseModel):
-    """
-    Describes the initial solid Earth model discretization on the degree axis.
-    """
-
-    steps: list[int] = [1, 2, 5, 10, 50, 100, 200, 500, 1000, 10000]
-    thresholds: list[int] = [1, 20, 40, 100, 200, 400, 1000, 2000, 6000, 10000, 100000]
-
-
-DEFAULT_DEGREE_DISCRETIZATION_PARAMETERS = DegreeDiscretizationParameters()
-
-
 class IntegrationParameters(BaseModel):
     """
     Describes the parameters necessary for the numerical integration of the y_i system.
@@ -140,8 +128,8 @@ class SolidEarthParameters(BaseModel):
     """
 
     model: SolidEarthModelParameters = DEFAULT_SOLID_EARTH_MODEL_PARAMETERS
-    degree_discretization: DegreeDiscretizationParameters = DEFAULT_DEGREE_DISCRETIZATION_PARAMETERS
-    numerical_parameters: IntegrationParameters = DEFAULT_SOLID_EARTH_INTEGRATION_PARAMETERS
+    n_max: Optional[int] = None
+    integration_parameters: IntegrationParameters = DEFAULT_SOLID_EARTH_INTEGRATION_PARAMETERS
     options: SolidEarthOptionParameters = DEFAULT_SOLID_EARTH_OPTION_PARAMETERS
 
 
