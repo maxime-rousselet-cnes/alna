@@ -5,7 +5,7 @@ Numerical constants.
 from pathlib import Path
 
 from base_models import DATA_PATH, SOLID_EARTH_MODEL_PROFILES
-from numpy import arange, array, concatenate
+from numpy import arange, array, concatenate, ndarray, pi
 from sympy import symbols
 
 ### Solid Earth model descriptions.
@@ -109,3 +109,11 @@ def generate_degree_tab(n_max: int = 100, n_start_steps: int = 20) -> list[int]:
             for i, degree_step in enumerate(degree_steps)
         ],
     ).tolist()
+
+
+def compute_omega_tab(period_tab: ndarray) -> ndarray:
+    """
+    Pulsation (rad.s^-1) from period (yr).
+    """
+
+    return 2 * pi / (SECONDS_PER_YEAR * period_tab)

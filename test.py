@@ -35,7 +35,7 @@ TEST_PARAMETER_FILE_PATH = Path(".")
 TEST_SOLID_EARTH_PARAMETERS_PATH = TEST_PATH.joinpath("solid_earth_parameters")
 ELASTIC_PERIOD_TAB = array(object=[1.0])
 DEFAULT_REFERENCE_LOVE_NUMBERS_PATH = Path("../../ViscoLove/EARTH_MODELS/PREM_ELASTIC")
-NUMERICAL_TOLERANCE = 2e-4
+NUMERICAL_TOLERANCE = 5e-5
 
 
 def test_load_solid_earth_model_profile_descriptions(
@@ -135,7 +135,7 @@ def verify_solid_earth_numerical_model_consistency(
 
 
 def test_load_solid_earth_numerical_model(
-    model: str = DEFAULT_MODELS[SolidEarthModelPart.elastic.value],
+    model: str = DEFAULT_MODELS[SolidEarthModelPart.ELASTIC.value],
     name: str = "parameters",
     path: Path = TEST_PARAMETER_FILE_PATH,
     test_path: Path = TEST_SOLID_EARTH_NUMERICAL_MODEL_PATH,
@@ -146,7 +146,7 @@ def test_load_solid_earth_numerical_model(
     """
 
     profile_description = SolidEarthModelDescription(
-        name=model, solid_earth_model_part=SolidEarthModelPart.elastic
+        name=model, solid_earth_model_part=SolidEarthModelPart.ELASTIC
     )
     parameters: SolidEarthParameters = load_base_model(
         name=name, path=path, base_model_type=SolidEarthParameters
@@ -182,21 +182,21 @@ def test_merge_solid_earth_numerical_models(
         models = DEFAULT_MODELS
 
     elastic_profile_description = SolidEarthModelDescription(
-        name=models[SolidEarthModelPart.elastic.value],
-        solid_earth_model_part=SolidEarthModelPart.elastic,
+        name=models[SolidEarthModelPart.ELASTIC.value],
+        solid_earth_model_part=SolidEarthModelPart.ELASTIC,
     )
     parameters: SolidEarthParameters = load_base_model(
         name=name, path=path, base_model_type=SolidEarthParameters
     )
     solid_earth_numerical_model: SolidEarthNumericalModel = (
         elastic_profile_description.generate_solid_earth_numerical_model(
-            name=models[SolidEarthModelPart.elastic.value], solid_earth_parameters=parameters
+            name=models[SolidEarthModelPart.ELASTIC.value], solid_earth_parameters=parameters
         )
     )
 
     for component in SolidEarthModelPart:
 
-        if component == SolidEarthModelPart.elastic:
+        if component == SolidEarthModelPart.ELASTIC:
 
             continue
 
@@ -349,7 +349,7 @@ def compare_plot_to_elastic_reference(
 
 
 def test_integrate_elastic(
-    model: str = DEFAULT_MODELS[SolidEarthModelPart.elastic.value],
+    model: str = DEFAULT_MODELS[SolidEarthModelPart.ELASTIC.value],
     name: str = "parameters",
     path: Path = TEST_PARAMETER_FILE_PATH,
     test_path: Path = TEST_SOLID_EARTH_NUMERICAL_MODEL_PATH,
@@ -366,7 +366,7 @@ def test_integrate_elastic(
         path=reference_love_numbers_path
     )
     profile_description = SolidEarthModelDescription(
-        name=model, solid_earth_model_part=SolidEarthModelPart.elastic
+        name=model, solid_earth_model_part=SolidEarthModelPart.ELASTIC
     )
     parameters: SolidEarthParameters = load_base_model(
         name=name, path=path, base_model_type=SolidEarthParameters

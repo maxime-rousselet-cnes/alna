@@ -15,7 +15,7 @@
             "drho_dx_epsilon": 1.0e-10
         }
     },
-    "n_max": null,
+    "n_max": 10000,
     "integration_parameters": {
         "high_degrees_radius_sensibility": 1.0e-4,
         "minimal_radius": 1.0e3,

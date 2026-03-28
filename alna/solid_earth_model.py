@@ -2,6 +2,7 @@
 Solid Earth model description class for preprocessing.
 """
 
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Optional
 
@@ -24,16 +25,20 @@ from sympy.core.numbers import Zero
 from .constants import (
     INITIAL_Y_I,
     LAYERS_SEPARATOR,
-    SECONDS_PER_YEAR,
     SOLID_EARTH_MODEL_PROFILE_DESCRIPTIONS_PATH,
     SOLID_EARTH_NUMERICAL_MODEL_PART_NAMES_SEPARATOR,
     SOLID_EARTH_NUMERICAL_MODELS_PATH,
     Y_I_STATE_FOR_SURFACE,
     Y_I_STATE_VECTOR_LINE,
     G,
+    compute_omega_tab,
 )
 from .layer_model import LayerModel
-from .parameters import DEFAULT_COMPONENT_PARAMETERS, SolidEarthParameters
+from .parameters import (
+    DEFAULT_COMPONENT_PARAMETERS,
+    SolidEarthModelParameters,
+    SolidEarthParameters,
+)
 from .rheological_formulas import (
     create_rheological_expressions,
     fluid_system_matrix,
@@ -43,6 +48,144 @@ from .rheological_formulas import (
     solid_to_fluid,
     surface_solution,
 )
+
+
+class Expressions:
+    """
+    All sympy related attributes needed by a solid Earth numerical model.
+    """
+
+    expressions: dict[str, Expr] = {}
+    parameter_expressions: dict[str, Expr] = {}
+    terminal_parameter_values: dict[str, float] = {}
+
+    def evaluate(self, expression: Expr | str, x: Optional[float] = None) -> Expr:
+        """
+        Replaces all parameter expressions in a given expression by their numerical values.
+        """
+
+        evaluated_expression = evaluate_terminal_parameters(
+            expression=(
+                expression if not isinstance(expression, str) else self.expressions[expression]
+            ),
+            parameter_expressions=self.parameter_expressions,
+            terminal_parameter_values=self.terminal_parameter_values,
+        )
+
+        return (
+            evaluated_expression
+            if x is None
+            else evaluated_expression.xreplace(rule={self.expressions[r"x"]: x})
+        )
+
+    def create_propagators(
+        self,
+        model: SolidEarthModelParameters,
+        layer_models: list[LayerModel],
+        units: dict[str, float],
+    ) -> None:
+        """
+        Creates all rheological expressions, for every layer, needed for the y_i system
+        integration.
+        """
+
+        self.expressions[r"g_0"] = Zero()
+        self.expressions[r"x"] = Symbol(r"x")
+        self.expressions[r"n"] = Symbol(r"n")
+        self.expressions[r"\omega"] = Symbol(r"\omega")
+
+        for i_layer, layer_model in enumerate(layer_models):
+
+            x_inf = layer_model.r_inf / model.radius_unit
+            self.expressions |= {
+                parameter: sum(
+                    (
+                        # Makes all parameters unitless.
+                        (symbol / (1.0 if parameter not in units else units[parameter]))
+                        * self.expressions[r"x"] ** degree
+                        for degree, symbol in enumerate(polynomial_expression)
+                    ),
+                    start=Zero(),
+                )
+                for parameter, polynomial_expression in layer_model.parameter_symbols.items()
+            }
+            self.expressions = create_rheological_expressions(
+                expressions=self.expressions,
+                units=units,
+                component_parameters=(
+                    DEFAULT_COMPONENT_PARAMETERS
+                    if i_layer < model.structure_parameters.i_layer_cmb
+                    else model.component_parameters
+                ),
+            )
+            self.expressions[r"g_0"] = g_0_computing(
+                x=self.expressions[r"x"],
+                rho_0=self.expressions[r"\rho_0"],
+                g_0_inf=self.expressions[r"g_0"],
+                x_inf=x_inf,
+            )
+            self.expressions[r"g_0^{layer_{" + str(i_layer) + "}}"] = self.expressions[r"g_0"]
+            matrix_expression = (
+                fluid_system_matrix(expressions=self.expressions)
+                if model.structure_parameters.i_layer_cmb
+                > i_layer
+                >= model.structure_parameters.i_layer_icb
+                else solid_system_matrix(
+                    expressions=self.expressions,
+                    components=(
+                        DEFAULT_COMPONENT_PARAMETERS
+                        if i_layer < model.structure_parameters.i_layer_cmb
+                        else model.component_parameters
+                    ),
+                )
+            )
+            layer_models[i_layer].propagator = Matrix(
+                matrix_expression
+                @ Matrix(
+                    Y_I_STATE_VECTOR_LINE[
+                        : (
+                            2
+                            if (
+                                model.structure_parameters.i_layer_cmb
+                                > i_layer
+                                >= model.structure_parameters.i_layer_icb
+                            )
+                            else 6
+                        )
+                    ]
+                )
+            )
+            terminal_parameter_values, parameter_expressions = layer_models[
+                i_layer
+            ].get_parameters_dict()
+            self.terminal_parameter_values |= terminal_parameter_values
+            self.parameter_expressions |= parameter_expressions
+
+    def define_love_number_expressions(self, n: int) -> None:
+        """
+        (3, 3) Love numbers from (3, 6) y_i surface solutions.
+        """
+
+        self.expressions[r"L_n"] = surface_solution(
+            n=n,
+            y_1_s=Y_I_STATE_FOR_SURFACE[0],
+            y_2_s=Y_I_STATE_FOR_SURFACE[1],
+            y_3_s=Y_I_STATE_FOR_SURFACE[2],
+            g_0_surface=self.expressions[r"g_0"],
+        )
+
+
+@dataclass
+class IntegrationContext:
+    """
+    Describes the local context of an already performed integration. Needed for partial derivatives quadrature.
+    """
+
+    n: int
+    i_omega: int
+    omega: float
+    x_tabs: list[list[ndarray]]
+    y_tabs: list[list[ndarray]]
 
 
 class SolidEarthNumericalModel(BaseModel):
@@ -57,10 +200,9 @@ class SolidEarthNumericalModel(BaseModel):
     units: dict[str, float] = {}
     love_numbers: dict[float, ndarray] = {}
     love_number_partials: dict[str, dict[float, ndarray]] = {}
-    # Unsaved attributes.
-    expressions: dict[str, Expr] = {}
-    parameter_expressions: dict[str, Expr] = {}
-    terminal_parameter_values: dict[str, float] = {}
+    expressions: Expressions = Expressions()
+    # Unsaved attribute.
+
     model_config = ConfigDict(arbitrary_types_allowed=True)  # To authorize arrays.
 
     def save(self, path: Path = SOLID_EARTH_NUMERICAL_MODELS_PATH) -> None:
@@ -94,14 +236,10 @@ class SolidEarthNumericalModel(BaseModel):
         """
 
         self.name = SOLID_EARTH_NUMERICAL_MODEL_PART_NAMES_SEPARATOR.join((self.name, name))
-        r_inf = self.layer_models[
-            self.solid_earth_parameters.model.structure_parameters.i_layer_cmb
-        ].r_inf
-        i_layer_main = self.solid_earth_parameters.model.structure_parameters.i_layer_cmb
+        i_layer_main: int = self.solid_earth_parameters.model.structure_parameters.i_layer_cmb
+        r_inf = self.layer_models[i_layer_main].r_inf
         i_layer_merging_component = 0
-        new_layer_models = self.layer_models[
-            : self.solid_earth_parameters.model.structure_parameters.i_layer_cmb
-        ]
+        new_layer_models = self.layer_models[:i_layer_main]
         merging_component_layer_models = [
             LayerModel(r_inf=r_inf, r_sup=r_sup, name=layer_name)
             for r_inf, r_sup, layer_name in zip(
@@ -160,14 +298,14 @@ class SolidEarthNumericalModel(BaseModel):
 
     def create_propagators(self) -> None:
         """
-        Generates all needed symbols for the Y_i system symbolic definition.
+        Generates all needed symbols for the Y_i system symbolic definition. Takes care of the
+        nondimensionalization.
         """
 
+        i_layer_cmb: int = self.solid_earth_parameters.model.structure_parameters.i_layer_cmb
         self.units = {
             r"R": self.solid_earth_parameters.model.radius_unit,
-            r"\rho_0": self.layer_models[
-                self.solid_earth_parameters.model.structure_parameters.i_layer_cmb
-            ].evaluate(
+            r"\rho_0": self.layer_models[i_layer_cmb].evaluate(
                 radius_unit=self.solid_earth_parameters.model.radius_unit,
                 r_inf=True,
             ),
@@ -183,79 +321,48 @@ class SolidEarthNumericalModel(BaseModel):
         self.units[r"\omega_m^{inf}"] = self.units[r"f"]
         self.units[r"\mu_{k1}"] = self.units[r"\mu_0"]
         self.units[r"\eta_k"] = self.units[r"\eta_m"]
-        self.expressions[r"g_0"] = Zero()
-        self.expressions[r"x"] = Symbol(r"x")
-        self.expressions[r"n"] = Symbol(r"n")
-        self.expressions[r"\omega"] = Symbol(r"\omega")
-        i_layer_icb = self.solid_earth_parameters.model.structure_parameters.i_layer_icb
 
-        for i_layer, layer_model in enumerate(self.layer_models):
+        self.expressions.create_propagators(
+            model=self.solid_earth_parameters.model,
+            layer_models=self.layer_models,
+            units=self.units,
+        )
 
-            x_inf = layer_model.r_inf / self.solid_earth_parameters.model.radius_unit
-            self.expressions |= {
-                parameter: sum(
-                    (
-                        # Makes all parameters unitless.
-                        (symbol / (1.0 if parameter not in self.units else self.units[parameter]))
-                        * self.expressions[r"x"] ** degree
-                        for degree, symbol in enumerate(polynomial_expression)
-                    ),
-                    start=Zero(),
-                )
-                for parameter, polynomial_expression in layer_model.parameter_symbols.items()
+    def initialize_love_numbers_computing(
+        self,
+        period_tab_per_degree: dict[int, ndarray],
+        parameters_to_invert: list[str],
+    ) -> tuple[dict[str, list[Expr]], dict[str, Matrix]]:
+        """
+        Symbolic preprocessing providing compiled functions for numerical integration.
+        """
+
+        # Creates the y_i abstract system and updates all symbols and numerical values.
+        self.create_propagators()
+        partial_expressions_per_parameter, partials_matrix_per_parameter = {}, {}
+
+        # Defines formally the partial derivative symbols.
+        for parameter in parameters_to_invert:
+
+            partial_expressions, partials_matrix_for_parameter = partial_symbols(
+                parameter=parameter, state_vector_line=Y_I_STATE_VECTOR_LINE
+            )
+            partial_expressions_per_parameter[parameter] = partial_expressions
+            partials_matrix_per_parameter[parameter] = partials_matrix_for_parameter
+
+        self.love_numbers = {
+            n: zeros(shape=(len(period_tab), 3, 3))
+            for n, period_tab in period_tab_per_degree.items()
+        }
+        self.love_number_partials = {
+            parameter: {
+                n: zeros(shape=(len(period_tab), 3, 3))
+                for n, period_tab in period_tab_per_degree.items()
             }
-            self.expressions = create_rheological_expressions(
-                expressions=self.expressions,
-                units=self.units,
-                component_parameters=(
-                    DEFAULT_COMPONENT_PARAMETERS
-                    if i_layer < self.solid_earth_parameters.model.structure_parameters.i_layer_cmb
-                    else self.solid_earth_parameters.model.component_parameters
-                ),
-            )
-            self.expressions[r"g_0"] = g_0_computing(
-                x=self.expressions[r"x"],
-                rho_0=self.expressions[r"\rho_0"],
-                g_0_inf=self.expressions[r"g_0"],
-                x_inf=x_inf,
-            )
-            self.expressions[r"g_0^{layer_{" + str(i_layer) + "}}"] = self.expressions[r"g_0"]
-            matrix_expression = (
-                fluid_system_matrix(expressions=self.expressions)
-                if self.solid_earth_parameters.model.structure_parameters.i_layer_cmb
-                > i_layer
-                >= self.solid_earth_parameters.model.structure_parameters.i_layer_icb
-                else solid_system_matrix(
-                    expressions=self.expressions,
-                    components=(
-                        DEFAULT_COMPONENT_PARAMETERS
-                        if i_layer
-                        < self.solid_earth_parameters.model.structure_parameters.i_layer_cmb
-                        else self.solid_earth_parameters.model.component_parameters
-                    ),
-                )
-            )
-            self.layer_models[i_layer].propagator = Matrix(
-                matrix_expression
-                @ Matrix(
-                    Y_I_STATE_VECTOR_LINE[
-                        : (
-                            2
-                            if (
-                                self.solid_earth_parameters.model.structure_parameters.i_layer_cmb
-                                > i_layer
-                                >= i_layer_icb
-                            )
-                            else 6
-                        )
-                    ]
-                )
-            )
-            terminal_parameter_values, parameter_expressions = self.layer_models[
-                i_layer
-            ].get_parameters_dict()
-            self.terminal_parameter_values |= terminal_parameter_values
-            self.parameter_expressions |= parameter_expressions
+            for parameter in parameters_to_invert
+        }
+
+        return partial_expressions_per_parameter, partials_matrix_per_parameter
 
     def integrate_y_i_layer(
         self, i_layer: int, y_i: ndarray, n: int, propagator: Expr
@@ -276,7 +383,7 @@ class SolidEarthNumericalModel(BaseModel):
         x, y = adaptive_runge_kutta_45(
             fun=lambdify(
                 args=[
-                    self.expressions[r"x"],
+                    self.expressions.expressions[r"x"],
                     Y_I_STATE_VECTOR_LINE[
                         : (
                             2
@@ -330,8 +437,8 @@ class SolidEarthNumericalModel(BaseModel):
 
             propagator = layer_model.propagator.xreplace(
                 rule={
-                    self.expressions[r"n"]: n,
-                    self.expressions[r"\omega"]: omega / self.units[r"f"],
+                    self.expressions.expressions[r"n"]: n,
+                    self.expressions.expressions[r"\omega"]: omega / self.units[r"f"],
                 }
             )
 
@@ -370,15 +477,9 @@ class SolidEarthNumericalModel(BaseModel):
                                 r_inf=True,
                             )
                             / self.units[r"\rho_0"],
-                            g_0_fluid_inf=evaluate_terminal_parameters(
-                                expression=self.expressions[r"g_0^{layer_{" + str(i_layer) + "}}"],
-                                parameter_expressions=self.parameter_expressions,
-                                terminal_parameter_values=self.terminal_parameter_values,
-                            ).xreplace(
-                                rule={
-                                    self.expressions[r"x"]: layer_model.r_inf
-                                    / self.solid_earth_parameters.model.radius_unit,
-                                }
+                            g_0_fluid_inf=self.expressions.evaluate(
+                                expression=r"g_0^{layer_{" + str(i_layer) + "}}",
+                                x=layer_model.r_inf / self.solid_earth_parameters.model.radius_unit,
                             ),
                         )
 
@@ -398,15 +499,9 @@ class SolidEarthNumericalModel(BaseModel):
                             radius_unit=self.solid_earth_parameters.model.radius_unit,
                         )
                         / self.units[r"\rho_0"],
-                        g_0_fluid_sup=evaluate_terminal_parameters(
-                            expression=self.expressions[r"g_0^{layer_{" + str(i_layer) + "}}"],
-                            parameter_expressions=self.parameter_expressions,
-                            terminal_parameter_values=self.terminal_parameter_values,
-                        ).xreplace(
-                            rule={
-                                self.expressions[r"x"]: layer_model.r_sup
-                                / self.solid_earth_parameters.model.radius_unit,
-                            }
+                        g_0_fluid_sup=self.expressions.evaluate(
+                            expression=r"g_0^{layer_{" + str(i_layer) + "}}",
+                            x=layer_model.r_sup / self.solid_earth_parameters.model.radius_unit,
                         ),
                     )
 
@@ -426,9 +521,130 @@ class SolidEarthNumericalModel(BaseModel):
 
         return x_tabs, y_tabs
 
+    def compute_love_numbers_from_surface_solution(
+        self, integration_context: IntegrationContext
+    ) -> None:
+        """
+        Applies the Love number expressions to the integrated y_i at surface.
+        """
+
+        for y_i_symbols, y_i_tab in zip(Y_I_STATE_FOR_SURFACE, integration_context.y_tabs[-1]):
+
+            # Applies the expression of the solution to the (3, 6) y_i.
+            self.expressions.expressions[r"L_n"] = self.expressions.expressions[r"L_n"].xreplace(
+                rule=dict(zip(y_i_symbols, y_i_tab[-1]))
+            )
+
+        self.love_numbers[integration_context.n][integration_context.i_omega] = array(
+            object=self.expressions.expressions[r"L_n"].doit()
+        )
+
+    def integrate_partials(
+        self,
+        integration_context: IntegrationContext,
+        parameter: str,
+        partial_expressions_per_parameter: dict[str, list[Expr]],
+    ) -> None:
+        """
+        Performs the quadrature of partial derivatives of the y_i system with respect to invertible
+        parameters and deduce the Love number partial derivatives, for a single parameter, degree
+        and period.
+        """
+
+        y_i_partials = zeros(shape=(3, 6))
+
+        # So layer_model actually represents the (i_layer + i_layer_cmb)-th layer.
+        for i_layer, layer_model in enumerate(
+            self.layer_models[self.solid_earth_parameters.model.structure_parameters.i_layer_cmb :]
+        ):
+
+            partial_propagator = layer_model.partial_propagators[parameter].xreplace(
+                rule={
+                    self.expressions.expressions[r"n"]: integration_context.n,
+                    # Uses unitless pulsation for integration.
+                    self.expressions.expressions[r"\omega"]: integration_context.omega
+                    / self.units[r"f"],
+                }
+            )
+
+            for i_boundary_condition, (x_tab, y_tab) in enumerate(
+                zip(integration_context.x_tabs[i_layer], integration_context.y_tabs[i_layer])
+            ):
+
+                y_i_partials[i_boundary_condition] = non_adaptive_runge_kutta_45(
+                    fun=lambdify(
+                        args=[
+                            self.expressions.expressions[r"x"],
+                            Y_I_STATE_VECTOR_LINE,
+                            partial_expressions_per_parameter[parameter],
+                        ],
+                        expr=flatten(partial_propagator),
+                        modules=[{"exp_polar": exp}, "mpmath"],
+                    ),
+                    t=x_tab,
+                    y_0=y_i_partials[i_boundary_condition],
+                    parameters=y_tab,
+                )[
+                    -1
+                ]  # The x-dependent partial is useless.
+
+        # TODO: Gets the surface solution partials from y_i_partials
+        self.love_number_partials[parameter][integration_context.n][integration_context.i_omega] = (
+            array(
+                object=self.expressions.expressions[
+                    r"\frac{\partial L_n}{\partial " + parameter + "}"
+                ],
+                dtype=complex,
+            )
+        )
+
+    def compute_love_numbers_for_degree(
+        self,
+        n: int,
+        period_tab: ndarray,
+        parameters_to_invert: list[str],
+        partial_expressions_per_parameter: dict[str, list[Expr]],
+    ) -> None:
+        """
+        Performs the y_i system integration for a single degree n.
+        """
+
+        # Generates the Love number expression from y_i at x = 1. Depends numerically on n.
+        self.expressions.define_love_number_expressions(n=n)
+
+        for parameter in parameters_to_invert:
+
+            # TODO: Differentiates with respect to the parameters to invert.
+            self.expressions.expressions[r"\frac{\partial L_n}{\partial " + parameter + "}"] = (
+                Zero()
+            )
+
+        # Apply numerical values so that only the (3, 6) y_i remain.
+        self.expressions.expressions[r"L_n"] = self.expressions.evaluate(
+            expression=self.expressions.expressions[r"L_n"], x=1
+        )
+
+        for i_omega, omega in enumerate(compute_omega_tab(period_tab=period_tab)):
+
+            # Integrates the raw y_i system (no partials) through every layer for the 3 boundary
+            # conditions.
+            x_tabs, y_tabs = self.integrate_y_i_system(n=n, omega=omega)
+            integration_context = IntegrationContext(
+                n=n, i_omega=i_omega, omega=omega, x_tabs=x_tabs, y_tabs=y_tabs
+            )
+            self.compute_love_numbers_from_surface_solution(integration_context=integration_context)
+
+            for parameter in parameters_to_invert:
+
+                self.integrate_partials(
+                    integration_context=integration_context,
+                    parameter=parameter,
+                    partial_expressions_per_parameter=partial_expressions_per_parameter,
+                )
+
     def compute_love_numbers(
         self,
-        period_tab_per_degree: dict[int, ndarray],
+        period_tab_per_degree: dict[int, ndarray],  # (yr).
         parameters_to_invert: Optional[list[str]] = None,
     ) -> None:
         """
@@ -439,135 +655,39 @@ class SolidEarthNumericalModel(BaseModel):
 
             parameters_to_invert = []
 
-        # Creates the y_i abstract system and updates all symbols and numerical values.
-        self.create_propagators()
-        partial_expressions_per_parameter, partials_matrix_per_parameter = {}, {}
-
-        # Defines formally the partial derivative symbols.
-        for parameter in parameters_to_invert:
-
-            partial_expressions, partials_matrix_for_parameter = partial_symbols(
-                parameter=parameter, state_vector_line=Y_I_STATE_VECTOR_LINE
+        partial_expressions_per_parameter, partials_matrix_per_parameter = (
+            self.initialize_love_numbers_computing(
+                period_tab_per_degree=period_tab_per_degree,
+                parameters_to_invert=parameters_to_invert,
             )
-            partial_expressions_per_parameter[parameter] = partial_expressions
-            partials_matrix_per_parameter[parameter] = partials_matrix_for_parameter
+        )
 
         # Applies the variation equations on the y_i system for every invertible parameter and
         # replaces all variables by their numerical values in the expressions. Only remain x, omega,
         # n, the 6 y_i and their partial derivatives.
-        for i_layer, layer_model in enumerate(self.layer_models):
+        for layer_model in self.layer_models:
 
             for parameter in parameters_to_invert:
 
-                layer_model.partial_propagators[parameter] = evaluate_terminal_parameters(
+                layer_model.partial_propagators[parameter] = self.expressions.evaluate(
                     expression=vector_variation_equation(
                         dynamic=layer_model.propagator,
                         parameter=parameter,
                         partials=partials_matrix_per_parameter[parameter],
                         state_vector_line=Y_I_STATE_VECTOR_LINE,
-                    ),
-                    parameter_expressions=self.parameter_expressions,
-                    terminal_parameter_values=self.terminal_parameter_values,
+                    )
                 )
 
-            layer_model.propagator = evaluate_terminal_parameters(
-                expression=layer_model.propagator,
-                parameter_expressions=self.parameter_expressions,
-                terminal_parameter_values=self.terminal_parameter_values,
-            )
-
-        self.love_numbers = {
-            n: zeros(shape=(len(period_tab), 3, 3))
-            for n, period_tab in period_tab_per_degree.items()
-        }
-        self.love_number_partials = {
-            parameter: {
-                n: zeros(shape=(len(period_tab), 3, 3))
-                for n, period_tab in period_tab_per_degree.items()
-            }
-            for parameter in parameters_to_invert
-        }
+            layer_model.propagator = self.expressions.evaluate(expression=layer_model.propagator)
 
         for n, period_tab in period_tab_per_degree.items():
 
-            omega_tab = 2 * pi / (SECONDS_PER_YEAR * period_tab)
-            # Generates the Love number expression from y_i at x = 1. Depends numerically on n.
-            love_number_expressions_from_surface_solutions = surface_solution(
+            self.compute_love_numbers_for_degree(
                 n=n,
-                y_1_s=Y_I_STATE_FOR_SURFACE[0],
-                y_2_s=Y_I_STATE_FOR_SURFACE[1],
-                y_3_s=Y_I_STATE_FOR_SURFACE[2],
-                g_0_surface=self.expressions[r"g_0"],
+                period_tab=period_tab,
+                parameters_to_invert=parameters_to_invert,
+                partial_expressions_per_parameter=partial_expressions_per_parameter,
             )
-            # Differentiates with respect to the parameters to invert.
-            love_number_partial_expressions_from_surface_solutions = Zero()
-            # Apply numerical values so that only the (3, 6) y_i remain.
-            love_number_expressions_from_surface_solutions = evaluate_terminal_parameters(
-                expression=love_number_expressions_from_surface_solutions,
-                parameter_expressions=self.parameter_expressions,
-                terminal_parameter_values=self.terminal_parameter_values,
-            ).xreplace(rule={self.expressions[r"x"]: 1})
-
-            for i_omega, omega in enumerate(omega_tab):
-
-                # Integrates the raw y_i system (no partials) through every layer for the 3 boundary
-                # conditions.
-                x_tabs, y_tabs = self.integrate_y_i_system(n=n, omega=omega)
-
-                for y_i_symbols, y_i_tab in zip(Y_I_STATE_FOR_SURFACE, y_tabs[-1]):
-
-                    # Applies the expression of the solution to the (3, 6) y_i.
-                    love_number_expressions_from_surface_solutions: Matrix = (
-                        love_number_expressions_from_surface_solutions.xreplace(
-                            rule=dict(zip(y_i_symbols, y_i_tab[-1]))
-                        )
-                    )
-
-                self.love_numbers[n][i_omega] = array(
-                    object=love_number_expressions_from_surface_solutions.doit()
-                )
-
-                for parameter in parameters_to_invert:
-
-                    y_i_partials = zeros(shape=(3, 6))
-
-                    # So layer_model actually represents the (i_layer + i_layer_cmb)-th layer.
-                    for i_layer, layer_model in enumerate(
-                        self.layer_models[
-                            self.solid_earth_parameters.model.structure_parameters.i_layer_cmb :
-                        ]
-                    ):
-
-                        partial_propagator = layer_model.partial_propagators[parameter].xreplace(
-                            rule={
-                                self.expressions[r"n"]: n,
-                                self.expressions[r"\omega"]: omega / self.units[r"f"],
-                            }
-                        )
-
-                        for i_boundary_condition, (x_tab, y_tab) in enumerate(
-                            zip(x_tabs[i_layer], y_tabs[i_layer])
-                        ):
-
-                            y_i_partials[i_boundary_condition] = non_adaptive_runge_kutta_45(
-                                fun=lambdify(
-                                    args=[
-                                        self.expressions[r"x"],
-                                        Y_I_STATE_VECTOR_LINE,
-                                        partial_expressions_per_parameter[parameter],
-                                    ],
-                                    expr=flatten(partial_propagator),
-                                    modules=[{"exp_polar": exp}, "mpmath"],
-                                ),
-                                t=x_tab,
-                                y_0=y_i_partials[i_boundary_condition],
-                                parameters=y_tab,
-                            )[
-                                -1
-                            ]  # The x-dependent partial is useless.
-
-                    # Gets the surface solution partials from y_i_partials
-                    self.love_number_partials[parameter][n][i_omega] = zeros(shape=(3, 3))
 
 
 def load_solid_earth_numerical_model(
