@@ -33,7 +33,7 @@ TEST_SOLID_EARTH_MODEL_PROFILE_DESCRIPTIONS_PATH = TEST_PATH.joinpath(
 TEST_SOLID_EARTH_NUMERICAL_MODEL_PATH = TEST_PATH.joinpath("solid_earth_numerical_models")
 TEST_PARAMETER_FILE_PATH = Path(".")
 TEST_SOLID_EARTH_PARAMETERS_PATH = TEST_PATH.joinpath("solid_earth_parameters")
-ELASTIC_PERIOD_TAB = array(object=[1.0])
+ELASTIC_PERIOD_TAB = array(object=[1.0])  # (yr).
 DEFAULT_REFERENCE_LOVE_NUMBERS_PATH = Path("../../ViscoLove/EARTH_MODELS/PREM_ELASTIC")
 NUMERICAL_TOLERANCE = 5e-5
 
@@ -407,24 +407,51 @@ def test_integrate_elastic(
         )
 
 
-# TODO:
+def test_check_anelastic_settings(
+    models: Optional[dict[str, str]] = None,
+    name: str = "parameters",
+    path: Path = TEST_PARAMETER_FILE_PATH,
+    test_path: Path = TEST_SOLID_EARTH_NUMERICAL_MODEL_PATH,
+) -> None:
+    """
+    Integrates a model in every different anelastic setting (2x2x2 = 8 options) to check robustness
+    for a single (degree, period) pair.
+    """
 
-# Lint.
-# Check base_models and simone.
-# Test.
-# Push.
+    if models is None:
 
-# # Third function that plots time-dependent difference to elastic in 2D and save.
+        models = DEFAULT_MODELS
 
-# Fourth function that does the 8 loop: the integration for every component parameters
-# possibility and small degree list and period list. Test saving and loading.
+    # Initializes the elastic model.
+    elastic_profile_description = SolidEarthModelDescription(
+        name=models[SolidEarthModelPart.ELASTIC.value],
+        solid_earth_model_part=SolidEarthModelPart.ELASTIC,
+    )
+    parameters: SolidEarthParameters = load_base_model(
+        name=name, path=path, base_model_type=SolidEarthParameters
+    )
+    solid_earth_numerical_model: SolidEarthNumericalModel = (
+        elastic_profile_description.generate_solid_earth_numerical_model(
+            name=models[SolidEarthModelPart.ELASTIC.value], solid_earth_parameters=parameters
+        )
+    )
 
-# Add the
-# Fifth function that also integrates partials with respect to transient or viscous parameters
-# when possible. Test saving and loading. Compare with ultra-defined finite differences: 2 plots
-# for k_2: 2D and 1D along alpha.
+    # Merges with the other components.
+    for component in SolidEarthModelPart:
 
-"""
+        if component == SolidEarthModelPart.ELASTIC:
+
+            continue
+
+        solid_earth_numerical_model.merge(
+            solid_earth_model_description=SolidEarthModelDescription(
+                name=models[component.value],
+                solid_earth_model_part=component,
+            ),
+            name=models[component.value],
+        )
+
+    # Loops on every option and tests the integration.
     for viscous_component in [False, True]:
 
         parameters.model.component_parameters.viscous_component = viscous_component
@@ -438,4 +465,20 @@ def test_integrate_elastic(
                 parameters.model.component_parameters.bounded_attenuation_functions = (
                     bounded_attentuation_functions
                 )
-"""
+                solid_earth_numerical_model.solid_earth_parameters = parameters
+                solid_earth_numerical_model.compute_love_numbers(
+                    period_tab_per_degree={2: ELASTIC_PERIOD_TAB}
+                )
+
+
+# TODO:
+
+# # Third function that plots time-dependent difference to elastic in 2D and save.
+
+# Fourth function that does the 8 loop: the integration for every component parameters
+# possibility and small degree list and period list. Test saving and loading.
+
+# Add the
+# Fifth function that also integrates partials with respect to transient or viscous parameters
+# when possible. Test saving and loading. Compare with ultra-defined finite differences: 2 plots
+# for k_2: 2D and 1D along alpha.
