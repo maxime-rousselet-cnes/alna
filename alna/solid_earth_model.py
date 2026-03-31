@@ -23,6 +23,7 @@ from sympy import Expr, Matrix, Symbol, flatten, lambdify
 from sympy.core.numbers import Zero
 
 from .constants import (
+    COMPLEX_PARTS,
     INITIAL_Y_I,
     LAYERS_SEPARATOR,
     SOLID_EARTH_MODEL_PROFILE_DESCRIPTIONS_PATH,
@@ -178,7 +179,8 @@ class Expressions:
 @dataclass
 class IntegrationContext:
     """
-    Describes the local context of an already performed integration. Needed for partial derivatives quadrature.
+    Describes the local context of an already performed integration. Needed for partial derivatives
+    quadrature.
     """
 
     n: int
@@ -198,8 +200,8 @@ class SolidEarthNumericalModel(BaseModel):
     layer_models: list[LayerModel]
     solid_earth_parameters: SolidEarthParameters
     units: dict[str, float] = {}
-    love_numbers: dict[float, ndarray] = {}
-    love_number_partials: dict[str, dict[float, ndarray]] = {}
+    love_numbers: dict[str, dict[int, ndarray]] = {}
+    love_number_partials: dict[str, dict[str, dict[int, ndarray]]] = {}
     expressions: Expressions = Expressions()
     # Unsaved attribute.
 
@@ -321,7 +323,6 @@ class SolidEarthNumericalModel(BaseModel):
         self.units[r"\omega_m^{inf}"] = self.units[r"f"]
         self.units[r"\mu_{k1}"] = self.units[r"\mu_0"]
         self.units[r"\eta_k"] = self.units[r"\eta_m"]
-
         self.expressions.create_propagators(
             model=self.solid_earth_parameters.model,
             layer_models=self.layer_models,
@@ -351,15 +352,21 @@ class SolidEarthNumericalModel(BaseModel):
             partials_matrix_per_parameter[parameter] = partials_matrix_for_parameter
 
         self.love_numbers = {
-            n: zeros(shape=(len(period_tab), 3, 3))
-            for n, period_tab in period_tab_per_degree.items()
-        }
-        self.love_number_partials = {
-            parameter: {
-                n: zeros(shape=(len(period_tab), 3, 3))
+            part: {
+                n: zeros(shape=(len(period_tab), 3, 3), dtype=float)
                 for n, period_tab in period_tab_per_degree.items()
             }
-            for parameter in parameters_to_invert
+            for part in COMPLEX_PARTS
+        }
+        self.love_number_partials = {
+            part: {
+                parameter: {
+                    n: zeros(shape=(len(period_tab), 3, 3), dtype=float)
+                    for n, period_tab in period_tab_per_degree.items()
+                }
+                for parameter in parameters_to_invert
+            }
+            for part in COMPLEX_PARTS
         }
 
         return partial_expressions_per_parameter, partials_matrix_per_parameter
@@ -397,12 +404,7 @@ class SolidEarthNumericalModel(BaseModel):
                     ],
                 ],
                 expr=flatten(propagator),
-                modules=(
-                    [{"exp_polar": exp}, "mpmath"]
-                    if i_layer >= self.solid_earth_parameters.model.structure_parameters.i_layer_cmb
-                    and self.solid_earth_parameters.model.component_parameters.transient_component
-                    else "numpy"
-                ),
+                modules=["numpy", "scipy"],
             ),
             t_bounds=(
                 max(
@@ -528,22 +530,74 @@ class SolidEarthNumericalModel(BaseModel):
         Applies the Love number expressions to the integrated y_i at surface.
         """
 
+        self.expressions.expressions[r"L_n^{\omega}"] = self.expressions.expressions[r"L_n"]
+
         for y_i_symbols, y_i_tab in zip(Y_I_STATE_FOR_SURFACE, integration_context.y_tabs[-1]):
 
             # Applies the expression of the solution to the (3, 6) y_i.
-            self.expressions.expressions[r"L_n"] = self.expressions.expressions[r"L_n"].xreplace(
-                rule=dict(zip(y_i_symbols, y_i_tab[-1]))
+            self.expressions.expressions[r"L_n^{\omega}"] = self.expressions.expressions[
+                r"L_n^{\omega}"
+            ].xreplace(rule=dict(zip(y_i_symbols, y_i_tab[-1])))
+
+        love_numbers = array(
+            object=self.expressions.expressions[r"L_n^{\omega}"].doit(), dtype=complex
+        )
+        self.love_numbers["real"][integration_context.n][integration_context.i_omega, :, :] = array(
+            object=love_numbers.real, dtype=float
+        )
+
+        if array(object=abs(love_numbers.imag)).any():
+
+            self.love_numbers["imag"][integration_context.n][integration_context.i_omega, :, :] = (
+                array(object=love_numbers.imag, dtype=float)
             )
 
-        self.love_numbers[integration_context.n][integration_context.i_omega] = array(
-            object=self.expressions.expressions[r"L_n"].doit()
+    def compute_love_number_partials(
+        self,
+        integration_context: IntegrationContext,
+        parameter: str,
+        y_i_all_partial_symbols: dict[str, list[list[Expr]]],
+        y_i_partials: ndarray,
+    ) -> None:
+        """
+        Deduces the Love number partial derivates from the y_i partial derivative surface solutions.
+        """
+
+        love_number_partials = self.expressions.expressions[
+            r"\frac{\partial L_n}{\partial " + parameter + "}"
+        ]
+        for y_i_symbols, y_tab_last_layer, y_i_partial_symbols, y_i_partial in zip(
+            Y_I_STATE_FOR_SURFACE,
+            integration_context.y_tabs[-1],
+            y_i_all_partial_symbols,
+            y_i_partials,
+        ):
+
+            love_number_partials = love_number_partials.xreplace(
+                rule=dict(zip(y_i_symbols, y_tab_last_layer[-1]))
+                | dict(zip(y_i_partial_symbols, y_i_partial))
+            )
+
+        love_number_partials_array = array(
+            object=love_number_partials,
+            dtype=complex,
         )
+        self.love_number_partials["real"][parameter][integration_context.n][
+            integration_context.i_omega, :, :
+        ] = array(object=love_number_partials_array.real, dtype=float)
+
+        if array(object=love_number_partials_array.imag).any():
+
+            self.love_number_partials["imag"][integration_context.n][
+                integration_context.i_omega, :, :
+            ] = array(object=love_number_partials_array.imag, dtype=float)
 
     def integrate_partials(
         self,
         integration_context: IntegrationContext,
         parameter: str,
         partial_expressions_per_parameter: dict[str, list[Expr]],
+        y_i_all_partial_symbols: dict[str, list[list[Expr]]],
     ) -> None:
         """
         Performs the quadrature of partial derivatives of the y_i system with respect to invertible
@@ -551,7 +605,7 @@ class SolidEarthNumericalModel(BaseModel):
         and period.
         """
 
-        y_i_partials = zeros(shape=(3, 6))
+        y_i_partials = zeros(shape=(3, 6), dtype=complex)
 
         # So layer_model actually represents the (i_layer + i_layer_cmb)-th layer.
         for i_layer, layer_model in enumerate(
@@ -588,14 +642,11 @@ class SolidEarthNumericalModel(BaseModel):
                     -1
                 ]  # The x-dependent partial is useless.
 
-        # TODO: Gets the surface solution partials from y_i_partials
-        self.love_number_partials[parameter][integration_context.n][integration_context.i_omega] = (
-            array(
-                object=self.expressions.expressions[
-                    r"\frac{\partial L_n}{\partial " + parameter + "}"
-                ],
-                dtype=complex,
-            )
+        self.compute_love_number_partials(
+            integration_context=integration_context,
+            parameter=parameter,
+            y_i_all_partial_symbols=y_i_all_partial_symbols,
+            y_i_partials=y_i_partials,
         )
 
     def compute_love_numbers_for_degree(
@@ -611,10 +662,12 @@ class SolidEarthNumericalModel(BaseModel):
 
         # Generates the Love number expression from y_i at x = 1. Depends numerically on n.
         self.expressions.define_love_number_expressions(n=n)
+        y_i_all_partial_symbols: dict[str, list[list[int]]] = {}
 
         for parameter in parameters_to_invert:
 
             # TODO: Differentiates with respect to the parameters to invert.
+            y_i_all_partial_symbols[parameter] = []
             self.expressions.expressions[r"\frac{\partial L_n}{\partial " + parameter + "}"] = (
                 Zero()
             )
@@ -640,20 +693,58 @@ class SolidEarthNumericalModel(BaseModel):
                     integration_context=integration_context,
                     parameter=parameter,
                     partial_expressions_per_parameter=partial_expressions_per_parameter,
+                    y_i_all_partial_symbols=y_i_all_partial_symbols,
                 )
+
+    def format_name(self) -> None:
+        """
+        Eventually renames the model for clarity and separability of tests in directories.
+        """
+
+        suffix = ""
+
+        if not self.solid_earth_parameters.model.component_parameters.transient_component:
+
+            suffix += SOLID_EARTH_NUMERICAL_MODEL_PART_NAMES_SEPARATOR + "no_transient"
+
+        elif (
+            not self.solid_earth_parameters.model.component_parameters.bounded_attenuation_functions
+        ):
+
+            suffix += (
+                SOLID_EARTH_NUMERICAL_MODEL_PART_NAMES_SEPARATOR
+                + "no_bounded_attenuation_functions"
+            )
+
+        if not self.solid_earth_parameters.model.component_parameters.viscous_component:
+
+            suffix += SOLID_EARTH_NUMERICAL_MODEL_PART_NAMES_SEPARATOR + "no_viscous"
+
+        if not self.name.endswith(suffix):
+
+            self.name += suffix
 
     def compute_love_numbers(
         self,
         period_tab_per_degree: dict[int, ndarray],  # (yr).
         parameters_to_invert: Optional[list[str]] = None,
+        format_name: bool = True,
     ) -> None:
         """
         Performs the y_i system integration for every degree and period of the list.
         """
 
+        if format_name:
+
+            self.format_name()
+
         if parameters_to_invert is None:
 
             parameters_to_invert = []
+
+        from time import time
+
+        t_0 = time()
 
         partial_expressions_per_parameter, partials_matrix_per_parameter = (
             self.initialize_love_numbers_computing(
@@ -661,6 +752,8 @@ class SolidEarthNumericalModel(BaseModel):
                 parameters_to_invert=parameters_to_invert,
             )
         )
+
+        print(time() - t_0)
 
         # Applies the variation equations on the y_i system for every invertible parameter and
         # replaces all variables by their numerical values in the expressions. Only remain x, omega,
@@ -699,8 +792,8 @@ def load_solid_earth_numerical_model(
     """
 
     loaded_content = load_base_model(name=name, path=path)
-    love_numbers: dict[int, list[list[list[float]]]] = loaded_content["love_numbers"]
-    love_number_partials: dict[str, dict[int, list[list[list[float]]]]] = loaded_content[
+    love_numbers: dict[str, dict[int, list[list[list[float]]]]] = loaded_content["love_numbers"]
+    love_number_partials: dict[str, dict[str, dict[int, list[list[list[float]]]]]] = loaded_content[
         "love_number_partials"
     ]
     solid_earth_numerical_model = SolidEarthNumericalModel(
@@ -709,14 +802,21 @@ def load_solid_earth_numerical_model(
         solid_earth_parameters=loaded_content["solid_earth_parameters"],
         units=loaded_content["units"],
         love_numbers={
-            n: array(object=love_numbers_tab) for n, love_numbers_tab in love_numbers.items()
+            part: {
+                n: array(object=love_numbers_tab)
+                for n, love_numbers_tab in love_numbers_part.items()
+            }
+            for part, love_numbers_part in love_numbers.items()
         },
         love_number_partials={
-            parameter: {
-                n: array(object=love_number_partials_tab)
-                for n, love_number_partials_tab in partials.items()
+            part: {
+                parameter: {
+                    n: array(object=love_number_partials_tab)
+                    for n, love_number_partials_tab in partials.items()
+                }
+                for parameter, partials in love_number_partials_part.items()
             }
-            for parameter, partials in love_number_partials.items()
+            for part, love_number_partials_part in love_number_partials.items()
         },
     )
     layer_model: dict[str, dict | str | float]

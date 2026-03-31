@@ -1,16 +1,26 @@
 {
     "layer_names": [
-        "MANTLE"
+        "LOWER_MANTLE",
+        "UPPER_MANTLE",
+        "CRUST"
     ],
     "r_limits": [
         3480000.0,
+        5701000.0,
+        6346600.0,
         6371000.0
     ],
     "optional_crust_values": null,
     "polynomials": {
         "\\eta_m": [
             [
-                3e21
+                1e23
+            ],
+            [
+                1e18
+            ],
+            [
+                "inf"
             ]
         ]
     }

@@ -3,7 +3,23 @@ Formulas involving rheological constants.
 """
 
 from numpy import array, ndarray, pi
-from sympy import DotProduct, Expr, I, Matrix, MutableDenseMatrix, Piecewise, Symbol, integrate, log
+from sympy import (
+    DotProduct,
+    Expr,
+    I,
+    Matrix,
+    MutableDenseMatrix,
+    Piecewise,
+    Pow,
+    Wild,
+    exp_polar,
+    gamma,
+    integrate,
+    lerchphi,
+    log,
+)
+from sympy import pi as sympy_pi
+from sympy import polylog, symbols
 from sympy.core.numbers import Infinity, One, Zero
 
 from .parameters import DEFAULT_COMPONENT_PARAMETERS, ComponentParameters
@@ -123,6 +139,25 @@ def find_tau_m_sup(
     ) / period_unit
 
 
+def rewrite_lerch(expr: Expr, alpha: Expr):
+    """
+    Rewrites Lerch(s=1) to log, simplifies gamma(alpha)/gamma(alpha+1),
+    replaces exp_polar(3*I*pi/2) -> -I, and simplifies ratios of powers.
+    """
+
+    z = Wild("z")
+    a = Wild("a")
+    expr = expr.replace(lerchphi(z, 1, a), lambda z, a: -(z ** (-a)) * polylog(1, z))
+    expr = expr.replace(polylog(1, z), lambda z: -log(1 - z))
+    expr = expr.subs(exp_polar(3 * I * sympy_pi / 2), -I)
+    expr = expr.replace(gamma(alpha + 1), alpha * gamma(alpha))
+    tau = Wild("tau")
+    rest = Wild("rest")
+    expr = expr.replace(Pow(tau, alpha) / Pow(tau * rest, alpha), Pow(1 / rest, alpha))
+
+    return expr.simplify()
+
+
 def bounded_f_attenuation_computing(
     omega: Expr,
     alpha: Expr,
@@ -137,13 +172,22 @@ def bounded_f_attenuation_computing(
 
     tau_0 = 1.0  # (s).
     frequency_unit = 1 / period_unit
-    tau = Symbol("tau")
+    tau, frequency_unit_symbol = symbols(r"\tau f_{unit}")
     tau_m_inf = 1 / omega_m_inf
 
-    return -integrate(
-        (tau / tau_0) ** alpha / (1 + I * omega * frequency_unit * tau) / tau,
-        (tau, tau_m_inf * period_unit, tau_m_sup * period_unit),
+    f = (
+        -rewrite_lerch(
+            expr=integrate(
+                (tau / tau_0) ** alpha / (1 + I * omega * frequency_unit_symbol * tau) / tau,
+                (tau, tau_m_inf * period_unit, tau_m_sup * period_unit),
+            ),
+            alpha=alpha,
+        )
+        .xreplace(rule={frequency_unit_symbol: frequency_unit})
+        .simplify()
     )
+
+    return f
 
 
 def delta_mu_computing(mu_0: Expr, q_mu: Expr, f_attenuation: Expr) -> Expr:
@@ -179,15 +223,15 @@ def attenuation_function_computing(
 
     return (
         unbounded_f_attenuation_computing(
-            frequency=expressions[r"omega"] / (2 * pi),
-            alpha=expressions[r"alpha"],
+            frequency=expressions[r"\omega"] / (2 * pi),
+            alpha=expressions[r"\alpha"],
             frequency_unit=units[r"f"],
             omega_m_inf=expressions[r"\omega_m^{inf}"],
         )
         if not bounded_attenuation_functions
         else bounded_f_attenuation_computing(
-            omega=expressions[r"omega"],
-            alpha=expressions[r"alpha"],
+            omega=expressions[r"\omega"],
+            alpha=expressions[r"\alpha"],
             omega_m_inf=expressions[r"\omega_m^{inf}"],
             tau_m_sup=find_tau_m_sup(
                 omega_m_inf=expressions[r"\omega_m^{inf}"],
@@ -229,18 +273,24 @@ def create_rheological_expressions(
             maxwell_characteristic_pulsation=maxwell_characteristic_pulsation,
             omega=expressions[r"\omega"],
         )
-        b = b_computing(
-            maxwell_characteristic_pulsation=maxwell_characteristic_pulsation,
-            kelvin_characteristic_pulsation=characteristic_pulsation_computing(
-                mu=mu_k_computing(
-                    mu_k1=expressions[r"\mu_{k1}"], c=expressions[r"c"], mu_0=expressions[r"\mu_0"]
+        b = (
+            Zero()
+            if r"\eta_k" not in expressions
+            else b_computing(
+                maxwell_characteristic_pulsation=maxwell_characteristic_pulsation,
+                kelvin_characteristic_pulsation=characteristic_pulsation_computing(
+                    mu=mu_k_computing(
+                        mu_k1=expressions[r"\mu_{k1}"],
+                        c=expressions[r"c"],
+                        mu_0=expressions[r"\mu_0"],
+                    ),
+                    eta=expressions[r"\eta_k"],
                 ),
-                eta=expressions[r"\eta_k"],
-            ),
-            burgers_characteristic_pulsation=characteristic_pulsation_computing(
-                mu=expressions[r"\mu_0"], eta=expressions[r"\eta_k"]
-            ),
-            omega=expressions[r"\omega"],
+                burgers_characteristic_pulsation=characteristic_pulsation_computing(
+                    mu=expressions[r"\mu_0"], eta=expressions[r"\eta_k"]
+                ),
+                omega=expressions[r"\omega"],
+            )
         )
 
     if not component_parameters.transient_component:

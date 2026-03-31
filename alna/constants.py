@@ -26,6 +26,7 @@ G = 6.67430e-11
 
 # s.y^-1
 SECONDS_PER_YEAR = 365.25 * 86400
+COMPLEX_PARTS = ["real", "imag"]
 
 
 # For integration.
