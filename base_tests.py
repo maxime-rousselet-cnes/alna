@@ -13,10 +13,11 @@ from base_models import (
     load_base_model,
     save_base_model,
 )
-from numpy import array
+from numpy import array, ndarray
 
 from alna import (
     COMPLEX_PARTS,
+    SOLID_EARTH_NUMERICAL_MODEL_PART_NAMES_SEPARATOR,
     SolidEarthModelDescription,
     SolidEarthNumericalModel,
     SolidEarthParameters,
@@ -30,6 +31,7 @@ TEST_SOLID_EARTH_NUMERICAL_MODEL_PATH = TEST_PATH.joinpath("solid_earth_numerica
 TEST_PARAMETERS_FILE_PATH = Path(".")
 TEST_PARAMETERS_SAVE_PATH = TEST_PATH.joinpath("solid_earth_parameters")
 ELASTIC_PERIOD_TAB = array(object=[1.0])  # (yr).
+ALPHA_PERIOD_TAB = array(object=[10.0])  # (yr).
 
 
 def test_load_solid_earth_model_profile_descriptions(
@@ -207,21 +209,7 @@ def test_merge_solid_earth_numerical_models(
             name=models[SolidEarthModelPart.ELASTIC.value], solid_earth_parameters=parameters
         )
     )
-
-    for component in SolidEarthModelPart:
-
-        if component == SolidEarthModelPart.ELASTIC:
-
-            continue
-
-        solid_earth_numerical_model.merge(
-            solid_earth_model_description=SolidEarthModelDescription(
-                name=models[component.value],
-                solid_earth_model_part=component,
-            ),
-            name=models[component.value],
-        )
-
+    solid_earth_numerical_model.merge_all(models=models)
     solid_earth_numerical_model.save(path=test_path)
     reloaded_solid_earth_numerical_model = load_solid_earth_numerical_model(
         name=solid_earth_numerical_model.name, path=test_path
@@ -231,11 +219,12 @@ def test_merge_solid_earth_numerical_models(
     )
 
 
-def test_check_anelastic_settings(
+def _test_check_anelastic_settings(
     models: Optional[dict[str, str]] = None,
     name: str = "parameters",
     path: Path = TEST_PARAMETERS_SAVE_PATH,
     test_path: Path = TEST_SOLID_EARTH_NUMERICAL_MODEL_PATH.joinpath("check_anelastic_setting"),
+    periods_tab: ndarray = ELASTIC_PERIOD_TAB,
 ) -> None:
     """
     Integrates a model in every different anelastic setting to check robustness for a single
@@ -263,22 +252,7 @@ def test_check_anelastic_settings(
             name=models[SolidEarthModelPart.ELASTIC.value], solid_earth_parameters=parameters
         )
     )
-
-    # Merges with the other components.
-    for component in SolidEarthModelPart:
-
-        if component == SolidEarthModelPart.ELASTIC:
-
-            continue
-
-        solid_earth_numerical_model.merge(
-            solid_earth_model_description=SolidEarthModelDescription(
-                name=models[component.value],
-                solid_earth_model_part=component,
-            ),
-            name=models[component.value],
-        )
-
+    solid_earth_numerical_model.merge_all(models=models)
     initial_name = solid_earth_numerical_model.name
 
     # Loops on every option and tests the integration.
@@ -290,9 +264,7 @@ def test_check_anelastic_settings(
 
             parameters.model.component_parameters.transient_component = transient_component
 
-            for bounded_attentuation_functions in [
-                False
-            ]:  # , True] if transient_component else [False]:
+            for bounded_attentuation_functions in [False, True] if transient_component else [False]:
 
                 parameters.model.component_parameters.bounded_attenuation_functions = (
                     bounded_attentuation_functions
@@ -300,12 +272,38 @@ def test_check_anelastic_settings(
                 solid_earth_numerical_model.solid_earth_parameters = parameters
                 solid_earth_numerical_model.name = initial_name
                 solid_earth_numerical_model.compute_love_numbers(
-                    period_tab_per_degree={2: ELASTIC_PERIOD_TAB}
+                    period_tab_per_degree={2: periods_tab}
                 )
                 solid_earth_numerical_model.save(path=test_path)
 
 
-# TODO:
-# Function that also integrates partials with respect to transient or viscous parameters
-# when possible. Test saving and loading. Compare with ultra-defined finite differences: 2 plots
-# for k_2: 2D and 1D along alpha.
+def test_alpha_partial(
+    models: Optional[dict[str, str]] = None,
+    test_path: Path = TEST_SOLID_EARTH_NUMERICAL_MODEL_PATH.joinpath("alpha_partial"),
+    periods_tab: ndarray = ALPHA_PERIOD_TAB,
+) -> None:
+    """
+    Integrates the partial derivative of degree 2 Love numbers at given periods with respect to
+    the alpha parameter describing the transient regime in the whole mantle.
+    """
+
+    if models is None:
+
+        models = DEFAULT_MODELS
+
+    if test_path.exists():
+
+        rmtree(path=test_path)
+
+    solid_earth_numerical_model = load_solid_earth_numerical_model(
+        name=SOLID_EARTH_NUMERICAL_MODEL_PART_NAMES_SEPARATOR.join(models.values()),
+        path=test_path.parent,
+        force_transient=True,
+    )
+    solid_earth_numerical_model.compute_love_numbers(
+        period_tab_per_degree={2: periods_tab}, parameters_to_invert=[r"\alpha^{MANTLE_0}"]
+    )
+    solid_earth_numerical_model.save(path=test_path)
+
+
+# TODO: Profile the alpha partial integration.

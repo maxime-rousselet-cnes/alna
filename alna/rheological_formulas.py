@@ -10,16 +10,12 @@ from sympy import (
     Matrix,
     MutableDenseMatrix,
     Piecewise,
-    Pow,
-    Wild,
     exp_polar,
-    gamma,
     integrate,
-    lerchphi,
     log,
 )
 from sympy import pi as sympy_pi
-from sympy import polylog, symbols
+from sympy import symbols
 from sympy.core.numbers import Infinity, One, Zero
 
 from .parameters import DEFAULT_COMPONENT_PARAMETERS, ComponentParameters
@@ -139,23 +135,12 @@ def find_tau_m_sup(
     ) / period_unit
 
 
-def rewrite_lerch(expr: Expr, alpha: Expr):
+def rewrite_alpha_integral(expression: Expr) -> Expr:
     """
-    Rewrites Lerch(s=1) to log, simplifies gamma(alpha)/gamma(alpha+1),
-    replaces exp_polar(3*I*pi/2) -> -I, and simplifies ratios of powers.
+    Needed to rewrite the automatically derived expresison from sympy.
     """
 
-    z = Wild("z")
-    a = Wild("a")
-    expr = expr.replace(lerchphi(z, 1, a), lambda z, a: -(z ** (-a)) * polylog(1, z))
-    expr = expr.replace(polylog(1, z), lambda z: -log(1 - z))
-    expr = expr.subs(exp_polar(3 * I * sympy_pi / 2), -I)
-    expr = expr.replace(gamma(alpha + 1), alpha * gamma(alpha))
-    tau = Wild("tau")
-    rest = Wild("rest")
-    expr = expr.replace(Pow(tau, alpha) / Pow(tau * rest, alpha), Pow(1 / rest, alpha))
-
-    return expr.simplify()
+    return expression.xreplace(rule={exp_polar(3 * I * sympy_pi / 2): -I}).simplify()
 
 
 def bounded_f_attenuation_computing(
@@ -176,15 +161,14 @@ def bounded_f_attenuation_computing(
     tau_m_inf = 1 / omega_m_inf
 
     f = (
-        -rewrite_lerch(
-            expr=integrate(
+        Zero()
+        if alpha == 1 or tau_m_inf == tau_m_sup
+        else -rewrite_alpha_integral(
+            expression=integrate(
                 (tau / tau_0) ** alpha / (1 + I * omega * frequency_unit_symbol * tau) / tau,
                 (tau, tau_m_inf * period_unit, tau_m_sup * period_unit),
             ),
-            alpha=alpha,
-        )
-        .xreplace(rule={frequency_unit_symbol: frequency_unit})
-        .simplify()
+        ).xreplace(rule={frequency_unit_symbol: frequency_unit})
     )
 
     return f
@@ -226,15 +210,15 @@ def attenuation_function_computing(
             frequency=expressions[r"\omega"] / (2 * pi),
             alpha=expressions[r"\alpha"],
             frequency_unit=units[r"f"],
-            omega_m_inf=expressions[r"\omega_m^{inf}"],
+            omega_m_inf=expressions[r"\omega_{m-inf}"],
         )
         if not bounded_attenuation_functions
         else bounded_f_attenuation_computing(
             omega=expressions[r"\omega"],
             alpha=expressions[r"\alpha"],
-            omega_m_inf=expressions[r"\omega_m^{inf}"],
+            omega_m_inf=expressions[r"\omega_{m-inf}"],
             tau_m_sup=find_tau_m_sup(
-                omega_m_inf=expressions[r"\omega_m^{inf}"],
+                omega_m_inf=expressions[r"\omega_{m-inf}"],
                 period_unit=units[r"T"],
                 alpha=expressions[r"\alpha"],
                 delta=expressions[r"\Delta"],

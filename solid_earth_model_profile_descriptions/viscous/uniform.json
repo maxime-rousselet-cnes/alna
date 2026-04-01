@@ -1,7 +1,7 @@
 {
     "layer_names": [
-        "LOWER_MANTLE",
-        "UPPER_MANTLE",
+        "LOWER-MANTLE",
+        "UPPER-MANTLE",
         "CRUST"
     ],
     "r_limits": [

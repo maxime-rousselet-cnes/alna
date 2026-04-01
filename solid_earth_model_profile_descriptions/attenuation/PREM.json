@@ -1,12 +1,12 @@
 {
     "layer_names": [
-        "LOWER_MANTLE",
-        "MANTLE_TRANSITION_ZONE",
-        "MANTLE_LVZ",
-        "MANTLE_LID",
+        "LOWER-MANTLE",
+        "MANTLE-TRANSITION-ZONE",
+        "MANTLE-LVZ",
+        "MANTLE-LID",
         "CRUST"
     ],
-    "r_limits": [
+    "rlimits": [
         3480000.0,
         5701000.0,
         6151000.0,
@@ -14,9 +14,9 @@
         6346600.0,
         6371000.0
     ],
-    "optional_crust_values": null,
+    "optionalcrustvalues": null,
     "polynomials": {
-        "q_\\mu": [
+        "q\\mu": [
             [
                 312
             ],

@@ -2,25 +2,21 @@
 Solid Earth model description class for preprocessing.
 """
 
-from dataclasses import dataclass
 from pathlib import Path
 from typing import Optional
 
 from base_models import (
     SolidEarthModelPart,
     adaptive_runge_kutta_45,
-    evaluate_terminal_parameters,
     load_base_model,
     non_adaptive_runge_kutta_45,
     partial_symbols,
     save_base_model,
     vector_variation_equation,
 )
-from mpmath import exp
 from numpy import array, empty, inf, ndarray, pi, zeros
 from pydantic import BaseModel, ConfigDict
 from sympy import Expr, Matrix, Symbol, flatten, lambdify
-from sympy.core.numbers import Zero
 
 from .constants import (
     COMPLEX_PARTS,
@@ -29,165 +25,15 @@ from .constants import (
     SOLID_EARTH_MODEL_PROFILE_DESCRIPTIONS_PATH,
     SOLID_EARTH_NUMERICAL_MODEL_PART_NAMES_SEPARATOR,
     SOLID_EARTH_NUMERICAL_MODELS_PATH,
+    SYMPY_COMPILATION_MODULES_TRANSIENT_FRIENDLY,
     Y_I_STATE_FOR_SURFACE,
     Y_I_STATE_VECTOR_LINE,
     G,
     compute_omega_tab,
 )
-from .layer_model import LayerModel
-from .parameters import (
-    DEFAULT_COMPONENT_PARAMETERS,
-    SolidEarthModelParameters,
-    SolidEarthParameters,
-)
-from .rheological_formulas import (
-    create_rheological_expressions,
-    fluid_system_matrix,
-    fluid_to_solid,
-    g_0_computing,
-    solid_system_matrix,
-    solid_to_fluid,
-    surface_solution,
-)
-
-
-class Expressions:
-    """
-    All sympy related attributes needed by a solid Earth numerical model.
-    """
-
-    expressions: dict[str, Expr] = {}
-    parameter_expressions: dict[str, Expr] = {}
-    terminal_parameter_values: dict[str, float] = {}
-
-    def evaluate(self, expression: Expr | str, x: Optional[float] = None) -> Expr:
-        """
-        Replaces all parameter expressions in a given expression by their numerical values.
-        """
-
-        evaluated_expression = evaluate_terminal_parameters(
-            expression=(
-                expression if not isinstance(expression, str) else self.expressions[expression]
-            ),
-            parameter_expressions=self.parameter_expressions,
-            terminal_parameter_values=self.terminal_parameter_values,
-        )
-
-        return (
-            evaluated_expression
-            if x is None
-            else evaluated_expression.xreplace(rule={self.expressions[r"x"]: x})
-        )
-
-    def create_propagators(
-        self,
-        model: SolidEarthModelParameters,
-        layer_models: list[LayerModel],
-        units: dict[str, float],
-    ) -> None:
-        """
-        Creates all rheological expressions, for every layer, needed for the y_i system
-        integration.
-        """
-
-        self.expressions[r"g_0"] = Zero()
-        self.expressions[r"x"] = Symbol(r"x")
-        self.expressions[r"n"] = Symbol(r"n")
-        self.expressions[r"\omega"] = Symbol(r"\omega")
-
-        for i_layer, layer_model in enumerate(layer_models):
-
-            x_inf = layer_model.r_inf / model.radius_unit
-            self.expressions |= {
-                parameter: sum(
-                    (
-                        # Makes all parameters unitless.
-                        (symbol / (1.0 if parameter not in units else units[parameter]))
-                        * self.expressions[r"x"] ** degree
-                        for degree, symbol in enumerate(polynomial_expression)
-                    ),
-                    start=Zero(),
-                )
-                for parameter, polynomial_expression in layer_model.parameter_symbols.items()
-            }
-            self.expressions = create_rheological_expressions(
-                expressions=self.expressions,
-                units=units,
-                component_parameters=(
-                    DEFAULT_COMPONENT_PARAMETERS
-                    if i_layer < model.structure_parameters.i_layer_cmb
-                    else model.component_parameters
-                ),
-            )
-            self.expressions[r"g_0"] = g_0_computing(
-                x=self.expressions[r"x"],
-                rho_0=self.expressions[r"\rho_0"],
-                g_0_inf=self.expressions[r"g_0"],
-                x_inf=x_inf,
-            )
-            self.expressions[r"g_0^{layer_{" + str(i_layer) + "}}"] = self.expressions[r"g_0"]
-            matrix_expression = (
-                fluid_system_matrix(expressions=self.expressions)
-                if model.structure_parameters.i_layer_cmb
-                > i_layer
-                >= model.structure_parameters.i_layer_icb
-                else solid_system_matrix(
-                    expressions=self.expressions,
-                    components=(
-                        DEFAULT_COMPONENT_PARAMETERS
-                        if i_layer < model.structure_parameters.i_layer_cmb
-                        else model.component_parameters
-                    ),
-                )
-            )
-            layer_models[i_layer].propagator = Matrix(
-                matrix_expression
-                @ Matrix(
-                    Y_I_STATE_VECTOR_LINE[
-                        : (
-                            2
-                            if (
-                                model.structure_parameters.i_layer_cmb
-                                > i_layer
-                                >= model.structure_parameters.i_layer_icb
-                            )
-                            else 6
-                        )
-                    ]
-                )
-            )
-            terminal_parameter_values, parameter_expressions = layer_models[
-                i_layer
-            ].get_parameters_dict()
-            self.terminal_parameter_values |= terminal_parameter_values
-            self.parameter_expressions |= parameter_expressions
-
-    def define_love_number_expressions(self, n: int) -> None:
-        """
-        (3, 3) Love numbers from (3, 6) y_i surface solutions.
-        """
-
-        self.expressions[r"L_n"] = surface_solution(
-            n=n,
-            y_1_s=Y_I_STATE_FOR_SURFACE[0],
-            y_2_s=Y_I_STATE_FOR_SURFACE[1],
-            y_3_s=Y_I_STATE_FOR_SURFACE[2],
-            g_0_surface=self.expressions[r"g_0"],
-        )
-
-
-@dataclass
-class IntegrationContext:
-    """
-    Describes the local context of an already performed integration. Needed for partial derivatives
-    quadrature.
-    """
-
-    n: int
-    i_omega: int
-    omega: float
-    x_tabs: list[list[ndarray]]
-    y_tabs: list[list[ndarray]]
+from .parameters import SolidEarthParameters
+from .rheological_formulas import fluid_to_solid, solid_to_fluid
+from .sub_models import Expressions, IntegrationContext, LayerModel
 
 
 class SolidEarthNumericalModel(BaseModel):
@@ -298,6 +144,24 @@ class SolidEarthNumericalModel(BaseModel):
 
         self.layer_models = new_layer_models
 
+    def merge_all(self, models: dict[str, str]) -> None:
+        """
+        Merges the elastic component with the other components: attenuation, transient and viscous.
+        """
+        for component in SolidEarthModelPart:
+
+            if component == SolidEarthModelPart.ELASTIC:
+
+                continue
+
+            self.merge(
+                solid_earth_model_description=SolidEarthModelDescription(
+                    name=models[component.value],
+                    solid_earth_model_part=component,
+                ),
+                name=models[component.value],
+            )
+
     def create_propagators(self) -> None:
         """
         Generates all needed symbols for the Y_i system symbolic definition. Takes care of the
@@ -320,7 +184,7 @@ class SolidEarthNumericalModel(BaseModel):
         self.units[r"v_s"] = self.units[r"v_p"]
         self.units[r"\lambda_0"] = self.units[r"\mu_0"]
         self.units[r"f"] = 1.0 / self.units[r"T"]
-        self.units[r"\omega_m^{inf}"] = self.units[r"f"]
+        self.units[r"\omega_{m-inf}"] = self.units[r"f"]
         self.units[r"\mu_{k1}"] = self.units[r"\mu_0"]
         self.units[r"\eta_k"] = self.units[r"\eta_m"]
         self.expressions.create_propagators(
@@ -346,7 +210,8 @@ class SolidEarthNumericalModel(BaseModel):
         for parameter in parameters_to_invert:
 
             partial_expressions, partials_matrix_for_parameter = partial_symbols(
-                parameter=parameter, state_vector_line=Y_I_STATE_VECTOR_LINE
+                parameter=self.expressions.parameter_expressions[parameter],
+                state_vector_line=Y_I_STATE_VECTOR_LINE,
             )
             partial_expressions_per_parameter[parameter] = partial_expressions
             partials_matrix_per_parameter[parameter] = partials_matrix_for_parameter
@@ -404,7 +269,7 @@ class SolidEarthNumericalModel(BaseModel):
                     ],
                 ],
                 expr=flatten(propagator),
-                modules=["numpy", "scipy"],
+                modules=SYMPY_COMPILATION_MODULES_TRANSIENT_FRIENDLY,
             ),
             t_bounds=(
                 max(
@@ -566,10 +431,11 @@ class SolidEarthNumericalModel(BaseModel):
         love_number_partials = self.expressions.expressions[
             r"\frac{\partial L_n}{\partial " + parameter + "}"
         ]
+
         for y_i_symbols, y_tab_last_layer, y_i_partial_symbols, y_i_partial in zip(
             Y_I_STATE_FOR_SURFACE,
             integration_context.y_tabs[-1],
-            y_i_all_partial_symbols,
+            y_i_all_partial_symbols[parameter],
             y_i_partials,
         ):
 
@@ -588,7 +454,7 @@ class SolidEarthNumericalModel(BaseModel):
 
         if array(object=love_number_partials_array.imag).any():
 
-            self.love_number_partials["imag"][integration_context.n][
+            self.love_number_partials["imag"][parameter][integration_context.n][
                 integration_context.i_omega, :, :
             ] = array(object=love_number_partials_array.imag, dtype=float)
 
@@ -633,7 +499,7 @@ class SolidEarthNumericalModel(BaseModel):
                             partial_expressions_per_parameter[parameter],
                         ],
                         expr=flatten(partial_propagator),
-                        modules=[{"exp_polar": exp}, "mpmath"],
+                        modules=SYMPY_COMPILATION_MODULES_TRANSIENT_FRIENDLY,
                     ),
                     t=x_tab,
                     y_0=y_i_partials[i_boundary_condition],
@@ -662,19 +528,51 @@ class SolidEarthNumericalModel(BaseModel):
 
         # Generates the Love number expression from y_i at x = 1. Depends numerically on n.
         self.expressions.define_love_number_expressions(n=n)
-        y_i_all_partial_symbols: dict[str, list[list[int]]] = {}
+        y_i_all_partial_symbols: dict[str, list[list[Expr]]] = {}
 
         for parameter in parameters_to_invert:
 
-            # TODO: Differentiates with respect to the parameters to invert.
             y_i_all_partial_symbols[parameter] = []
             self.expressions.expressions[r"\frac{\partial L_n}{\partial " + parameter + "}"] = (
-                Zero()
+                -2  # Because same term will be added three times below.
+                * (
+                    self.expressions.expressions[r"L_n"].diff(
+                        self.expressions.parameter_expressions[parameter]
+                    )
+                )
             )
+
+            for y_i_state_line_for_surface in Y_I_STATE_FOR_SURFACE:
+
+                partial_expressions, partials_matrix_for_parameter = partial_symbols(
+                    parameter=self.expressions.parameter_expressions[parameter],
+                    state_vector_line=y_i_state_line_for_surface,
+                )
+                self.expressions.expressions[
+                    r"\frac{\partial L_n}{\partial " + parameter + "}"
+                ] += vector_variation_equation(
+                    dynamic=self.expressions.expressions[r"L_n"],
+                    parameter=self.expressions.parameter_expressions[parameter],
+                    partials=partials_matrix_for_parameter,
+                    state_vector_line=y_i_state_line_for_surface,
+                ).reshape(
+                    rows=3, cols=3
+                )
+                y_i_all_partial_symbols[parameter] += [partial_expressions]
+
+            self.expressions.expressions[r"\frac{\partial L_n}{\partial " + parameter + "}"] = (
+                self.expressions.evaluate(
+                    expression=self.expressions.expressions[
+                        r"\frac{\partial L_n}{\partial " + parameter + "}"
+                    ],
+                    x=1,
+                )
+            ).doit()
 
         # Apply numerical values so that only the (3, 6) y_i remain.
         self.expressions.expressions[r"L_n"] = self.expressions.evaluate(
-            expression=self.expressions.expressions[r"L_n"], x=1
+            expression=self.expressions.expressions[r"L_n"],
+            x=1,
         )
 
         for i_omega, omega in enumerate(compute_omega_tab(period_tab=period_tab)):
@@ -742,10 +640,6 @@ class SolidEarthNumericalModel(BaseModel):
 
             parameters_to_invert = []
 
-        from time import time
-
-        t_0 = time()
-
         partial_expressions_per_parameter, partials_matrix_per_parameter = (
             self.initialize_love_numbers_computing(
                 period_tab_per_degree=period_tab_per_degree,
@@ -753,25 +647,29 @@ class SolidEarthNumericalModel(BaseModel):
             )
         )
 
-        print(time() - t_0)
-
         # Applies the variation equations on the y_i system for every invertible parameter and
         # replaces all variables by their numerical values in the expressions. Only remain x, omega,
         # n, the 6 y_i and their partial derivatives.
         for layer_model in self.layer_models:
+
+            layer_model.partial_propagators = {}
 
             for parameter in parameters_to_invert:
 
                 layer_model.partial_propagators[parameter] = self.expressions.evaluate(
                     expression=vector_variation_equation(
                         dynamic=layer_model.propagator,
-                        parameter=parameter,
+                        parameter=self.expressions.parameter_expressions[parameter],
                         partials=partials_matrix_per_parameter[parameter],
                         state_vector_line=Y_I_STATE_VECTOR_LINE,
-                    )
+                    ),
+                    component_parameters=self.solid_earth_parameters.model.component_parameters,
                 )
 
-            layer_model.propagator = self.expressions.evaluate(expression=layer_model.propagator)
+            layer_model.propagator = self.expressions.evaluate(
+                expression=layer_model.propagator,
+                component_parameters=self.solid_earth_parameters.model.component_parameters,
+            )
 
         for n, period_tab in period_tab_per_degree.items():
 
@@ -786,6 +684,7 @@ class SolidEarthNumericalModel(BaseModel):
 def load_solid_earth_numerical_model(
     name: str,
     path: Path = SOLID_EARTH_NUMERICAL_MODELS_PATH,
+    force_transient: Optional[bool] = None,
 ) -> SolidEarthNumericalModel:
     """
     Loads a solid Earth numerical model and formats its expressions.
@@ -835,6 +734,12 @@ def load_solid_earth_numerical_model(
             for quantity, polynomial in layer_model["parameter_symbols"].items()
         }
 
+    if force_transient is not None:
+
+        model = solid_earth_numerical_model.solid_earth_parameters.model
+        model.component_parameters.transient_component = force_transient
+        solid_earth_numerical_model.solid_earth_parameters.model = model
+
     return solid_earth_numerical_model
 
 
@@ -861,7 +766,7 @@ class SolidEarthModelDescription:
     #   - for the attenuation part:
     #       - q_\mu: Shear modulus attenuation coefficient Q (unitless).
     #   - for the transient part:
-    #       - \omega_m^{inf}: (Hz).
+    #       - \omega_{m-inf}: (Hz).
     #       - \alpha: (Unitless).
     #       - \Delta: Defines mu(omega -> 0.0) / mu_0 (Unitless).
     #   - for the viscous part:

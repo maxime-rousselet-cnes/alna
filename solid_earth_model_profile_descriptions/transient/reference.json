@@ -10,12 +10,12 @@
     ],
     "optional_crust_values": null,
     "polynomials": {
-        "\\omega_m^{inf}": [
+        "\\omega_{m-inf}": [
             [
                 0.000309
             ],
             [
-                0.0
+                1.0
             ]
         ],
         "\\alpha": [
@@ -23,7 +23,7 @@
                 0.26
             ],
             [
-                0.0
+                1.0
             ]
         ],
         "\\Delta": [

@@ -6,6 +6,7 @@ from pathlib import Path
 
 from base_models import DATA_PATH, SOLID_EARTH_MODEL_PROFILES
 from numpy import arange, array, concatenate, ndarray, pi
+from scipy import special
 from sympy import symbols
 
 ### Solid Earth model descriptions.
@@ -54,6 +55,11 @@ Y_I_STATE_FOR_SURFACE = [
         )
     )
     for i_line in range(3)
+]
+SYMPY_COMPILATION_MODULES_TRANSIENT_FRIENDLY = [
+    # pylint: disable=no-member
+    {"hyper": lambda num, den, arg: special.hyp2f1(num[0], num[1], den[0], arg)},
+    "numpy",
 ]
 
 # Other low level parameters.

@@ -7,23 +7,28 @@ from shutil import rmtree
 from typing import Optional
 
 from base_models import DEFAULT_MODELS, SolidEarthModelPart, load_base_model
-from numpy import array, logspace, ndarray, zeros
+from numpy import array, linspace, logspace, ndarray, zeros
 
 from alna import (
     DEFAULT_COMPONENT_PARAMETERS,
+    SOLID_EARTH_NUMERICAL_MODEL_PART_NAMES_SEPARATOR,
     SolidEarthModelDescription,
     SolidEarthNumericalModel,
     SolidEarthParameters,
     load_solid_earth_numerical_model,
 )
 from base_tests import (
+    ALPHA_PERIOD_TAB,
     ELASTIC_PERIOD_TAB,
     TEST_PARAMETERS_SAVE_PATH,
     TEST_SOLID_EARTH_NUMERICAL_MODEL_PATH,
     verify_solid_earth_numerical_model_consistency,
 )
 
-VISCOUS_PERIOD_TAB = logspace(-3, 5, num=20, base=10)  # (yr).
+N_PERIODS_VISCOUS_INTEGRATION_TEST = 20
+VISCOUS_PERIOD_TAB = logspace(
+    -3, 5, num=N_PERIODS_VISCOUS_INTEGRATION_TEST, base=10
+)  # (yr), from sub-daily to 100 kyr.
 DEFAULT_REFERENCE_LOVE_NUMBERS_PATH = Path("../../ViscoLove/EARTH_MODELS/PREM_ELASTIC")
 NUMERICAL_TOLERANCE = 5e-5
 TEST_ELASTIC_INTEGRATION_PATH = TEST_SOLID_EARTH_NUMERICAL_MODEL_PATH.joinpath(
@@ -32,6 +37,10 @@ TEST_ELASTIC_INTEGRATION_PATH = TEST_SOLID_EARTH_NUMERICAL_MODEL_PATH.joinpath(
 TEST_VISCOUS_INTEGRATION_PATH = TEST_SOLID_EARTH_NUMERICAL_MODEL_PATH.joinpath(
     "viscous_integration_test"
 )
+TEST_ALPHA_PARTIAL_INTEGRATION_PATH = TEST_SOLID_EARTH_NUMERICAL_MODEL_PATH.joinpath(
+    "alpha_partial"
+)
+ALPHA_TAB = linspace(start=0.2, stop=0.3, num=100)
 
 
 def load_reference_love_number_file_for_validation(file_path: Path) -> tuple[list[int], ndarray]:
@@ -154,6 +163,7 @@ def test_integrate_elastic(
 def test_integrate_viscous(
     models: Optional[dict[str, str]] = None,
     period_tab: ndarray = VISCOUS_PERIOD_TAB,
+    elastic_test_path: Path = TEST_ELASTIC_INTEGRATION_PATH,
     test_path: Path = TEST_VISCOUS_INTEGRATION_PATH,
 ) -> None:
     """
@@ -171,26 +181,12 @@ def test_integrate_viscous(
 
     # Gets the elastic model.
     solid_earth_numerical_model: SolidEarthNumericalModel = load_solid_earth_numerical_model(
-        name=models[SolidEarthModelPart.ELASTIC.value], path=test_path.parent
+        name=models[SolidEarthModelPart.ELASTIC.value], path=elastic_test_path
     )
-
-    # Merges with the other components.
-    for component in SolidEarthModelPart:
-
-        if component == SolidEarthModelPart.ELASTIC:
-
-            continue
-
-        solid_earth_numerical_model.merge(
-            solid_earth_model_description=SolidEarthModelDescription(
-                name=models[component.value],
-                solid_earth_model_part=component,
-            ),
-            name=models[component.value],
-        )
-
+    solid_earth_numerical_model.merge_all(models=models)
     components = solid_earth_numerical_model.solid_earth_parameters.model.component_parameters
     components.viscous_component = True
+    components.transient_component = False
     solid_earth_numerical_model.solid_earth_parameters.model.component_parameters = components
     solid_earth_numerical_model.compute_love_numbers(
         period_tab_per_degree={
@@ -198,3 +194,42 @@ def test_integrate_viscous(
         }
     )
     solid_earth_numerical_model.save(path=test_path)
+
+
+def test_integrate_alpha_partials(
+    models: Optional[dict[str, str]] = None,
+    test_path: Path = TEST_ALPHA_PARTIAL_INTEGRATION_PATH,
+    periods_tab: ndarray = ALPHA_PERIOD_TAB,
+    alpha_tab: ndarray = ALPHA_TAB,
+) -> None:
+    """
+    Integrates the partial derivative of Love numbers with respect to alpha to compare it to finite.
+    differences.
+    """
+
+    if models is None:
+
+        models = DEFAULT_MODELS
+
+    base_name = SOLID_EARTH_NUMERICAL_MODEL_PART_NAMES_SEPARATOR.join(models.values())
+
+    if test_path.exists():
+
+        rmtree(path=test_path)
+
+    solid_earth_numerical_model = load_solid_earth_numerical_model(
+        name=base_name, path=test_path.parent, force_transient=True
+    )
+
+    for alpha in alpha_tab:
+
+        solid_earth_numerical_model.expressions.terminal_parameter_values[r"\alpha^{MANTLE_0}"] = (
+            alpha
+        )
+        solid_earth_numerical_model.name = SOLID_EARTH_NUMERICAL_MODEL_PART_NAMES_SEPARATOR.join(
+            (base_name, f"_alpha_{alpha:.3f}")
+        )
+        solid_earth_numerical_model.compute_love_numbers(
+            period_tab_per_degree={2: periods_tab}, parameters_to_invert=[r"\alpha^{MANTLE_0}"]
+        )
+        solid_earth_numerical_model.save(path=test_path)

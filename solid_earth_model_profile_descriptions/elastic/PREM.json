@@ -1,17 +1,17 @@
 {
     "layer_names": [
-        "INNER_CORE",
-        "FLUID_CORE",
-        "LOWER_MANTLE_1",
-        "LOWER_MANTLE_2",
-        "LOWER_MANTLE_3",
-        "MANTLE_TRANSITION_ZONE_1",
-        "MANTLE_TRANSITION_ZONE_2",
-        "MANTLE_TRANSITION_ZONE_3",
-        "MANTLE_LVZ",
-        "MANTLE_LID",
-        "CRUST_1",
-        "CRUST_2"
+        "INNER-CORE",
+        "FLUID-CORE",
+        "LOWER-MANTLE-1",
+        "LOWER-MANTLE-2",
+        "LOWER-MANTLE-3",
+        "MANTLE-TRANSITION-ZONE-1",
+        "MANTLE-TRANSITION-ZONE-2",
+        "MANTLE-TRANSITION-ZONE-3",
+        "MANTLE-LVZ",
+        "MANTLE-LID",
+        "CRUST-1",
+        "CRUST-2"
     ],
     "r_limits": [
         0.0,

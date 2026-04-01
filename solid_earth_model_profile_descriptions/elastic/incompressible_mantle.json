@@ -1,7 +1,7 @@
 {
     "layer_names": [
-        "INNER_CORE",
-        "FLUID_CORE",
+        "INNER-CORE",
+        "FLUID-CORE",
         "MANTLE"
     ],
     "r_limits": [

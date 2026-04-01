@@ -8,7 +8,7 @@
         "optional_crust_values": true,
         "radius_unit": null,
         "structure_parameters": {
-            "dynamic_term": false,
+            "dynamic_term": true,
             "i_layer_icb": null,
             "i_layer_cmb": null,
             "asymptotic_compressibility": false,
