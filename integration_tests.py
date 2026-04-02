@@ -3,7 +3,6 @@ Tests the consistency of integration. To test via pytest integration_tests.py.
 """
 
 from pathlib import Path
-from shutil import rmtree
 from typing import Optional
 
 from base_models import DEFAULT_MODELS, SolidEarthModelPart, load_base_model
@@ -22,6 +21,7 @@ from base_tests import (
     PARTIAL_PERIOD_TAB,
     TEST_PARAMETERS_SAVE_PATH,
     TEST_SOLID_EARTH_NUMERICAL_MODEL_PATH,
+    initialize_test,
     verify_solid_earth_numerical_model_consistency,
 )
 
@@ -172,15 +172,7 @@ def test_integrate_viscous(
     for a single (degree, period) pair.
     """
 
-    if models is None:
-
-        models = DEFAULT_MODELS
-
-    if test_path.exists():
-
-        rmtree(path=test_path)
-
-    # Gets the elastic model.
+    models = initialize_test(models=models, test_path=test_path)
     solid_earth_numerical_model: SolidEarthNumericalModel = load_solid_earth_numerical_model(
         name=models[SolidEarthModelPart.ELASTIC.value], path=elastic_test_path
     )
@@ -208,14 +200,7 @@ def test_integrate_alpha_partials(
     differences.
     """
 
-    if models is None:
-
-        models = DEFAULT_MODELS
-
-    if test_path.exists():
-
-        rmtree(path=test_path)
-
+    models = initialize_test(models=models, test_path=test_path)
     solid_earth_numerical_model = load_solid_earth_numerical_model(
         name=build_base_name(models=models), path=test_path.parent, force_transient=True
     )

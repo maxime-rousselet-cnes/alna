@@ -73,6 +73,3 @@ def load_solid_earth_numerical_model(
         solid_earth_numerical_model.solid_earth_parameters.model = model
 
     return solid_earth_numerical_model
-
-    return solid_earth_numerical_model
-    return solid_earth_numerical_model

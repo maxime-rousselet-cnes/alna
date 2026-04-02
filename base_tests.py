@@ -34,12 +34,9 @@ ELASTIC_PERIOD_TAB = array(object=[1.0])  # (yr).
 PARTIAL_PERIOD_TAB = array(object=[1.0, 9.3, 18.6])  # (yr).
 
 
-def test_load_solid_earth_model_profile_descriptions(
-    models: Optional[dict[str, str]] = None,
-    test_path: Path = TEST_SOLID_EARTH_MODEL_PROFILE_DESCRIPTIONS_PATH,
-) -> None:
+def initialize_test(models: Optional[dict[str, str]], test_path: Path) -> dict[str, str]:
     """
-    Loads solid Earth model profile descriptions, then saves and reloads to verify consistency.
+    Heavy tests always starts by this initialization.
     """
 
     if models is None:
@@ -49,6 +46,19 @@ def test_load_solid_earth_model_profile_descriptions(
     if test_path.exists():
 
         rmtree(path=test_path)
+
+    return models
+
+
+def test_load_solid_earth_model_profile_descriptions(
+    models: Optional[dict[str, str]] = None,
+    test_path: Path = TEST_SOLID_EARTH_MODEL_PROFILE_DESCRIPTIONS_PATH,
+) -> None:
+    """
+    Loads solid Earth model profile descriptions, then saves and reloads to verify consistency.
+    """
+
+    models = initialize_test(models=models, test_path=test_path)
 
     for solid_earth_model_part in SolidEarthModelPart:
 
@@ -231,13 +241,7 @@ def test_check_anelastic_settings(
     (degree, period) pair.
     """
 
-    if models is None:
-
-        models = DEFAULT_MODELS
-
-    if test_path.exists():
-
-        rmtree(path=test_path)
+    models = initialize_test(models=models, test_path=test_path)
 
     # Initializes the elastic model.
     elastic_profile_description = SolidEarthModelDescription(
@@ -286,14 +290,7 @@ def test_partials(
     the alpha parameter describing the transient regime in the whole mantle.
     """
 
-    if models is None:
-
-        models = DEFAULT_MODELS
-
-    if test_path.exists():
-
-        rmtree(path=test_path)
-
+    models = initialize_test(models=models, test_path=test_path)
     solid_earth_numerical_model = load_solid_earth_numerical_model(
         name=build_base_name(models=models),
         path=test_path.parent,
