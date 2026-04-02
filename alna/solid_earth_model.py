@@ -2,6 +2,7 @@
 Solid Earth model description class for preprocessing.
 """
 
+from itertools import product
 from pathlib import Path
 from typing import Optional
 
@@ -16,13 +17,14 @@ from base_models import (
 )
 from numpy import array, empty, inf, ndarray, pi, zeros
 from pydantic import BaseModel, ConfigDict
-from sympy import Expr, Matrix, Symbol, flatten, lambdify
+from sympy import Expr, Matrix, flatten, lambdify
 
 from .constants import (
     COMPLEX_PARTS,
     INITIAL_Y_I,
     LAYERS_SEPARATOR,
     SOLID_EARTH_MODEL_PROFILE_DESCRIPTIONS_PATH,
+    SOLID_EARTH_NUMERICAL_MODEL_NAME_FROM_INVERTIBLE_PARAMETERS_SEPARATOR,
     SOLID_EARTH_NUMERICAL_MODEL_PART_NAMES_SEPARATOR,
     SOLID_EARTH_NUMERICAL_MODELS_PATH,
     SYMPY_COMPILATION_MODULES_TRANSIENT_FRIENDLY,
@@ -34,6 +36,33 @@ from .constants import (
 from .parameters import SolidEarthParameters
 from .rheological_formulas import fluid_to_solid, solid_to_fluid
 from .sub_models import Expressions, IntegrationContext, LayerModel
+
+
+def compose_name_with_invertible_parameters(
+    name: str, parameters_to_invert: list[str], invertible_parameter_tab: list[float]
+) -> str:
+    """
+    Builds a model name characterized by a root and invertible parameter names and values.
+    """
+
+    for parameter, value in zip(parameters_to_invert, invertible_parameter_tab):
+
+        name = (
+            name
+            + SOLID_EARTH_NUMERICAL_MODEL_NAME_FROM_INVERTIBLE_PARAMETERS_SEPARATOR
+            + parameter
+            + f"_{value:.2e}"
+        )
+
+    return name
+
+
+def build_base_name(models: dict[str, str]) -> str:
+    """
+    A posteriori builds the name of an already merged model.
+    """
+
+    return SOLID_EARTH_NUMERICAL_MODEL_PART_NAMES_SEPARATOR.join(models.values())
 
 
 class SolidEarthNumericalModel(BaseModel):
@@ -524,6 +553,9 @@ class SolidEarthNumericalModel(BaseModel):
     ) -> None:
         """
         Performs the y_i system integration for a single degree n.
+        The analytical derivation of Love numbers from y_i system surface solutions being dependent
+        on the degree n, the expressions and their partials are defined inside the method and not in
+        the preprocessing step.
         """
 
         # Generates the Love number expression from y_i at x = 1. Depends numerically on n.
@@ -622,10 +654,52 @@ class SolidEarthNumericalModel(BaseModel):
 
             self.name += suffix
 
+    def prepare_all_propagators(
+        self,
+        parameters_to_invert: list[str],
+        invertible_parameter_tab: list[float],
+        general_propagators_per_layer: list[Expr],
+        general_partial_propagators_per_layer: list[dict[str, Expr]],
+    ) -> None:
+        """
+        Applies the parameter numerical values to all layer propagators and partial propagators.
+        """
+
+        self.name = compose_name_with_invertible_parameters(
+            name=self.name.split(
+                sep=SOLID_EARTH_NUMERICAL_MODEL_NAME_FROM_INVERTIBLE_PARAMETERS_SEPARATOR
+            )[0],
+            parameters_to_invert=parameters_to_invert,
+            invertible_parameter_tab=invertible_parameter_tab,
+        )
+
+        for parameter, value in zip(parameters_to_invert, invertible_parameter_tab):
+
+            self.expressions.terminal_parameter_values[parameter] = value
+
+        # Replaces all variables by their numerical values in the expressions. Only remain x,
+        # omega, n, the 6 y_i and their partial derivatives.
+        for i_layer, layer_model in enumerate(self.layer_models):
+
+            layer_model.partial_propagators = {}
+
+            for parameter in parameters_to_invert:
+
+                layer_model.partial_propagators[parameter] = self.expressions.evaluate(
+                    expression=general_partial_propagators_per_layer[i_layer][parameter],
+                    component_parameters=self.solid_earth_parameters.model.component_parameters,
+                )
+
+            layer_model.propagator = self.expressions.evaluate(
+                expression=general_propagators_per_layer[i_layer],
+                component_parameters=self.solid_earth_parameters.model.component_parameters,
+            )
+
     def compute_love_numbers(
         self,
         period_tab_per_degree: dict[int, ndarray],  # (yr).
-        parameters_to_invert: Optional[list[str]] = None,
+        parameters_to_invert_dictionary: Optional[dict[str, list[float]]] = None,
+        path: Path = SOLID_EARTH_NUMERICAL_MODELS_PATH,
         format_name: bool = True,
     ) -> None:
         """
@@ -636,111 +710,58 @@ class SolidEarthNumericalModel(BaseModel):
 
             self.format_name()
 
-        if parameters_to_invert is None:
-
-            parameters_to_invert = []
-
+        parameters_to_invert = (
+            []
+            if parameters_to_invert_dictionary is None
+            else list(parameters_to_invert_dictionary.keys())
+        )
         partial_expressions_per_parameter, partials_matrix_per_parameter = (
             self.initialize_love_numbers_computing(
                 period_tab_per_degree=period_tab_per_degree,
                 parameters_to_invert=parameters_to_invert,
             )
         )
+        general_propagators_per_layer: list[Expr] = []
+        general_partial_propagators_per_layer: list[dict[str, Expr]] = []
 
-        # Applies the variation equations on the y_i system for every invertible parameter and
-        # replaces all variables by their numerical values in the expressions. Only remain x, omega,
-        # n, the 6 y_i and their partial derivatives.
+        # Applies the variation equations on the y_i system for every invertible parameter.
         for layer_model in self.layer_models:
 
-            layer_model.partial_propagators = {}
+            general_propagators_per_layer += [layer_model.propagator]
+            general_partial_propagators_per_layer += [{}]
 
             for parameter in parameters_to_invert:
 
-                layer_model.partial_propagators[parameter] = self.expressions.evaluate(
-                    expression=vector_variation_equation(
-                        dynamic=layer_model.propagator,
-                        parameter=self.expressions.parameter_expressions[parameter],
-                        partials=partials_matrix_per_parameter[parameter],
-                        state_vector_line=Y_I_STATE_VECTOR_LINE,
-                    ),
-                    component_parameters=self.solid_earth_parameters.model.component_parameters,
+                general_partial_propagators_per_layer[-1][parameter] = vector_variation_equation(
+                    dynamic=layer_model.propagator,
+                    parameter=self.expressions.parameter_expressions[parameter],
+                    partials=partials_matrix_per_parameter[parameter],
+                    state_vector_line=Y_I_STATE_VECTOR_LINE,
                 )
 
-            layer_model.propagator = self.expressions.evaluate(
-                expression=layer_model.propagator,
-                component_parameters=self.solid_earth_parameters.model.component_parameters,
-            )
+        for invertible_parameter_tab in (
+            [[]]
+            if parameters_to_invert_dictionary is None
+            else product(*parameters_to_invert_dictionary.values())
+        ):
 
-        for n, period_tab in period_tab_per_degree.items():
-
-            self.compute_love_numbers_for_degree(
-                n=n,
-                period_tab=period_tab,
+            self.prepare_all_propagators(
                 parameters_to_invert=parameters_to_invert,
-                partial_expressions_per_parameter=partial_expressions_per_parameter,
+                invertible_parameter_tab=invertible_parameter_tab,
+                general_propagators_per_layer=general_propagators_per_layer,
+                general_partial_propagators_per_layer=general_partial_propagators_per_layer,
             )
 
+            for n, period_tab in period_tab_per_degree.items():
 
-def load_solid_earth_numerical_model(
-    name: str,
-    path: Path = SOLID_EARTH_NUMERICAL_MODELS_PATH,
-    force_transient: Optional[bool] = None,
-) -> SolidEarthNumericalModel:
-    """
-    Loads a solid Earth numerical model and formats its expressions.
-    """
+                self.compute_love_numbers_for_degree(
+                    n=n,
+                    period_tab=period_tab,
+                    parameters_to_invert=parameters_to_invert,
+                    partial_expressions_per_parameter=partial_expressions_per_parameter,
+                )
 
-    loaded_content = load_base_model(name=name, path=path)
-    love_numbers: dict[str, dict[int, list[list[list[float]]]]] = loaded_content["love_numbers"]
-    love_number_partials: dict[str, dict[str, dict[int, list[list[list[float]]]]]] = loaded_content[
-        "love_number_partials"
-    ]
-    solid_earth_numerical_model = SolidEarthNumericalModel(
-        name=loaded_content["name"],
-        layer_models=[LayerModel() for _ in range(len(loaded_content["layer_models"]))],
-        solid_earth_parameters=loaded_content["solid_earth_parameters"],
-        units=loaded_content["units"],
-        love_numbers={
-            part: {
-                n: array(object=love_numbers_tab)
-                for n, love_numbers_tab in love_numbers_part.items()
-            }
-            for part, love_numbers_part in love_numbers.items()
-        },
-        love_number_partials={
-            part: {
-                parameter: {
-                    n: array(object=love_number_partials_tab)
-                    for n, love_number_partials_tab in partials.items()
-                }
-                for parameter, partials in love_number_partials_part.items()
-            }
-            for part, love_number_partials_part in love_number_partials.items()
-        },
-    )
-    layer_model: dict[str, dict | str | float]
-
-    for i_layer, layer_model in enumerate(loaded_content["layer_models"]):
-
-        solid_earth_numerical_model.layer_models[i_layer].name = layer_model["name"]
-        solid_earth_numerical_model.layer_models[i_layer].r_inf = layer_model["r_inf"]
-        solid_earth_numerical_model.layer_models[i_layer].r_sup = layer_model["r_sup"]
-        solid_earth_numerical_model.layer_models[i_layer].polynomials = {
-            parameter: [inf] if "inf" in polynomial else polynomial
-            for parameter, polynomial in layer_model["polynomials"].items()
-        }
-        solid_earth_numerical_model.layer_models[i_layer].parameter_symbols = {
-            quantity: [Symbol(parameter) for parameter in polynomial]
-            for quantity, polynomial in layer_model["parameter_symbols"].items()
-        }
-
-    if force_transient is not None:
-
-        model = solid_earth_numerical_model.solid_earth_parameters.model
-        model.component_parameters.transient_component = force_transient
-        solid_earth_numerical_model.solid_earth_parameters.model = model
-
-    return solid_earth_numerical_model
+            self.save(path=path)
 
 
 class SolidEarthModelDescription:

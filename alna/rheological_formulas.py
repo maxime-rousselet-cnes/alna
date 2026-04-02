@@ -130,7 +130,7 @@ def find_tau_m_sup(
     frequency_unit = 1 / period_unit
     tau_0 = 1.0  # (s).
 
-    return ((omega_m_inf * frequency_unit) ** (-alpha) - alpha * delta * q_mu * tau_0**alpha) ** (
+    return ((omega_m_inf * frequency_unit) ** (-alpha) + alpha * delta * q_mu * tau_0**alpha) ** (
         1.0 / alpha
     ) / period_unit
 
@@ -163,7 +163,7 @@ def bounded_f_attenuation_computing(
     f = (
         Zero()
         if alpha == 1 or tau_m_inf == tau_m_sup
-        else -rewrite_alpha_integral(
+        else -rewrite_alpha_integral(  # TODO: + or -? Relaunch with +.
             expression=integrate(
                 (tau / tau_0) ** alpha / (1 + I * omega * frequency_unit_symbol * tau) / tau,
                 (tau, tau_m_inf * period_unit, tau_m_sup * period_unit),

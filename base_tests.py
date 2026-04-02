@@ -17,10 +17,10 @@ from numpy import array, ndarray
 
 from alna import (
     COMPLEX_PARTS,
-    SOLID_EARTH_NUMERICAL_MODEL_PART_NAMES_SEPARATOR,
     SolidEarthModelDescription,
     SolidEarthNumericalModel,
     SolidEarthParameters,
+    build_base_name,
     load_solid_earth_numerical_model,
 )
 
@@ -31,7 +31,7 @@ TEST_SOLID_EARTH_NUMERICAL_MODEL_PATH = TEST_PATH.joinpath("solid_earth_numerica
 TEST_PARAMETERS_FILE_PATH = Path(".")
 TEST_PARAMETERS_SAVE_PATH = TEST_PATH.joinpath("solid_earth_parameters")
 ELASTIC_PERIOD_TAB = array(object=[1.0])  # (yr).
-ALPHA_PERIOD_TAB = array(object=[10.0])  # (yr).
+PARTIAL_PERIOD_TAB = array(object=[1.0, 9.3, 18.6])  # (yr).
 
 
 def test_load_solid_earth_model_profile_descriptions(
@@ -219,7 +219,7 @@ def test_merge_solid_earth_numerical_models(
     )
 
 
-def _test_check_anelastic_settings(
+def test_check_anelastic_settings(
     models: Optional[dict[str, str]] = None,
     name: str = "parameters",
     path: Path = TEST_PARAMETERS_SAVE_PATH,
@@ -272,15 +272,14 @@ def _test_check_anelastic_settings(
                 solid_earth_numerical_model.solid_earth_parameters = parameters
                 solid_earth_numerical_model.name = initial_name
                 solid_earth_numerical_model.compute_love_numbers(
-                    period_tab_per_degree={2: periods_tab}
+                    period_tab_per_degree={2: periods_tab}, path=test_path
                 )
-                solid_earth_numerical_model.save(path=test_path)
 
 
-def test_alpha_partial(
+def test_partials(
     models: Optional[dict[str, str]] = None,
-    test_path: Path = TEST_SOLID_EARTH_NUMERICAL_MODEL_PATH.joinpath("alpha_partial"),
-    periods_tab: ndarray = ALPHA_PERIOD_TAB,
+    test_path: Path = TEST_SOLID_EARTH_NUMERICAL_MODEL_PATH.joinpath("partials"),
+    periods_tab: ndarray = PARTIAL_PERIOD_TAB,
 ) -> None:
     """
     Integrates the partial derivative of degree 2 Love numbers at given periods with respect to
@@ -296,14 +295,15 @@ def test_alpha_partial(
         rmtree(path=test_path)
 
     solid_earth_numerical_model = load_solid_earth_numerical_model(
-        name=SOLID_EARTH_NUMERICAL_MODEL_PART_NAMES_SEPARATOR.join(models.values()),
+        name=build_base_name(models=models),
         path=test_path.parent,
         force_transient=True,
     )
     solid_earth_numerical_model.compute_love_numbers(
-        period_tab_per_degree={2: periods_tab}, parameters_to_invert=[r"\alpha^{MANTLE_0}"]
+        period_tab_per_degree={2: periods_tab},
+        parameters_to_invert_dictionary={
+            r"\alpha^{MANTLE_0}": [0.2, 0.3],
+            r"\eta_m^{UPPER-MANTLE_0}": [3e20, 3e21],
+        },
+        path=test_path,
     )
-    solid_earth_numerical_model.save(path=test_path)
-
-
-# TODO: Profile the alpha partial integration.

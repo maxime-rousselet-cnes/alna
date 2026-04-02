@@ -21,11 +21,13 @@ from numpy import array, diff, log10, meshgrid, ndarray, zeros
 from alna import (
     COMPLEX_PARTS,
     SOLID_EARTH_NUMERICAL_MODEL_PART_NAMES_SEPARATOR,
+    build_base_name,
+    compose_name_with_invertible_parameters,
     load_solid_earth_numerical_model,
 )
 from integration_tests import (
-    ALPHA_PERIOD_TAB,
     ALPHA_TAB,
+    PARTIAL_PERIOD_TAB,
     TEST_ALPHA_PARTIAL_INTEGRATION_PATH,
     TEST_ELASTIC_INTEGRATION_PATH,
     TEST_VISCOUS_INTEGRATION_PATH,
@@ -34,6 +36,18 @@ from integration_tests import (
 )
 
 DEFAULT_REFERENCE_LOVE_NUMBERS_PATH = Path("../../ViscoLove/EARTH_MODELS/PREM_ELASTIC")
+
+
+def save_figure(figure: Figure, figure_title: str, path: Path = TEST_FIGURES_PATH) -> None:
+    """
+    Saves figure to specified path.
+    """
+
+    path.mkdir(exist_ok=True, parents=True)
+
+    for file_format in ["svg", "png"]:
+
+        figure.savefig(fname=path.joinpath(figure_title + "." + file_format), format=file_format)
 
 
 def test_compare_plot_to_elastic_reference(
@@ -116,11 +130,7 @@ def test_compare_plot_to_elastic_reference(
 
             ax.set_xlabel("Degree")
 
-    path.mkdir(exist_ok=True, parents=True)
-
-    for file_format in ["svg", "png"]:
-
-        figure.savefig(fname=path.joinpath(figure_title + "." + file_format), format=file_format)
+    save_figure(figure=figure, figure_title=figure_title, path=path)
 
 
 def sub_function_compare_plot_viscous_to_elastic(
@@ -191,7 +201,7 @@ def test_compare_plot_viscous_to_elastic(
     degrees = list(elastic_model.love_numbers["real"].keys())
     viscous_model = load_solid_earth_numerical_model(
         name=SOLID_EARTH_NUMERICAL_MODEL_PART_NAMES_SEPARATOR.join(
-            list(models.values()) + ["no_transient"]
+            (build_base_name(models=models), "no_transient")
         ),
         path=test_path,
     )
@@ -212,7 +222,6 @@ def test_compare_plot_viscous_to_elastic(
     figure, axes = subplots(3, figsize=(7, 12), sharex=True)
     figure_title = "Viscous Love numbers compared to elastic"
     suptitle(figure_title)
-
     sub_function_compare_plot_viscous_to_elastic(
         degrees_mesh=degrees_mesh,
         periods_mesh=periods_mesh,
@@ -220,40 +229,28 @@ def test_compare_plot_viscous_to_elastic(
         all_data_to_plot=all_data_to_plot,
         figure=figure,
     )
-
     tight_layout()
-
-    path.mkdir(exist_ok=True, parents=True)
-
-    for file_format in ["svg", "png"]:
-
-        figure.savefig(fname=path.joinpath(figure_title + "." + file_format), format=file_format)
+    save_figure(figure=figure, figure_title=figure_title, path=path)
 
 
-def test_compare_plot_semi_analytical_partials_to_finite_differences(
-    models: Optional[dict[str, str]] = None,
-    test_path: Path = TEST_ALPHA_PARTIAL_INTEGRATION_PATH,
-    periods_tab: ndarray = ALPHA_PERIOD_TAB,
-    alpha_tab: ndarray = ALPHA_TAB,
-    path: Path = TEST_FIGURES_PATH,
-) -> None:
+def load_love_numbers_for_partials_plot(
+    models: dict[str, str], test_path: Path, periods_tab: ndarray, alpha_tab: ndarray
+) -> tuple[ndarray, ndarray]:
     """
-    Generates a figure of 3 subplots as a function of degree and period, for h', l', and k'.
-    Post-processes the needed data to do so.
+    Load love numbers and their partials for all alpha values.
     """
 
-    if models is None:
-
-        models = DEFAULT_MODELS
-
-    love_numbers = zeros(shape=(len(periods_tab), 3, len(alpha_tab)))
-    love_number_partials = zeros(shape=(len(periods_tab), 3, len(alpha_tab)))
+    love_numbers = zeros(shape=(len(periods_tab), 3, len(alpha_tab)), dtype=complex)
+    love_number_partials = zeros(shape=(len(periods_tab), 3, len(alpha_tab)), dtype=complex)
+    alpha_parameter_name = r"\alpha^{MANTLE_0}"
 
     for i_alpha, alpha in enumerate(alpha_tab):
 
         solid_earth_numerical_model = load_solid_earth_numerical_model(
-            name=SOLID_EARTH_NUMERICAL_MODEL_PART_NAMES_SEPARATOR.join(
-                list(models.values()) + [f"_alpha_{alpha:.3f}"]
+            name=compose_name_with_invertible_parameters(
+                name=build_base_name(models=models),
+                parameters_to_invert=[alpha_parameter_name],
+                invertible_parameter_tab=[alpha],
             ),
             path=test_path,
         )
@@ -267,20 +264,28 @@ def test_compare_plot_semi_analytical_partials_to_finite_differences(
             ]
         )
         love_number_partials[:, :, i_alpha] = (
-            solid_earth_numerical_model.love_number_partials["real"][2][
+            solid_earth_numerical_model.love_number_partials["real"][alpha_parameter_name][2][
                 :, BoundaryCondition.POTENTIAL.value, :
             ]
             + 1j
-            * solid_earth_numerical_model.love_number_partials["imag"][2][
+            * solid_earth_numerical_model.love_number_partials["imag"][alpha_parameter_name][2][
                 :, BoundaryCondition.POTENTIAL.value, :
             ]
         )
 
-    axes: Iterable[Iterable[Axes]]
-    figure, axes = subplots(3, 2, figsize=(7, 12), sharex=True)
-    figure_title = "Viscous Love numbers compared to elastic"
-    suptitle(figure_title)
+    return love_numbers, love_number_partials
 
+
+def plot_love_number_partials(
+    axes: Iterable[Iterable[Axes]],
+    love_numbers: ndarray,
+    love_number_partials: ndarray,
+    periods_tab: ndarray,
+    alpha_tab: ndarray,
+) -> None:
+    """
+    Plots love number partials against finite differences.
+    """
     for ax_line, label, direction in zip(axes, "hlk", Direction):
 
         for ax, part in zip(ax_line, COMPLEX_PARTS):
@@ -313,7 +318,7 @@ def test_compare_plot_semi_analytical_partials_to_finite_differences(
 
             if part == "real":
 
-                ax.set_ylabel(r"$\frac{\partial" + label + r"'_2}{\parial \alpha}$")
+                ax.set_ylabel(r"$\frac{\partial " + label + r"'_2}{\partial \alpha}$")
                 ax.tick_params(labelbottom=False)
 
             if label == "k":
@@ -321,18 +326,42 @@ def test_compare_plot_semi_analytical_partials_to_finite_differences(
                 ax.tick_params(labelbottom=True)
                 ax.set_xlabel(r"$\alpha$")
 
+            elif label == "h":
+
                 if part == "real":
 
                     ax.legend()
 
-            elif label == "h":
-
                 ax.set_title("Real part" if part == "real" else "Imaginary part")
 
+
+def test_compare_plot_semi_analytical_partials_to_finite_differences(
+    models: Optional[dict[str, str]] = None,
+    test_path: Path = TEST_ALPHA_PARTIAL_INTEGRATION_PATH,
+    periods_tab: ndarray = PARTIAL_PERIOD_TAB,
+    alpha_tab: ndarray = ALPHA_TAB,
+    path: Path = TEST_FIGURES_PATH,
+) -> None:
+    """
+    Generates a figure of 3 subplots as a function of degree and period, for h', l', and k'.
+    Post-processes the needed data to do so.
+    """
+
+    if models is None:
+
+        models = DEFAULT_MODELS
+
+    love_numbers, love_number_partials = load_love_numbers_for_partials_plot(
+        models=models, test_path=test_path, periods_tab=periods_tab, alpha_tab=alpha_tab
+    )
+    figure, axes = subplots(3, 2, figsize=(7, 12), sharex=True)
+    suptitle(r"$\alpha$ partials")
+    plot_love_number_partials(
+        axes=axes,
+        love_numbers=love_numbers,
+        love_number_partials=love_number_partials,
+        periods_tab=periods_tab,
+        alpha_tab=alpha_tab,
+    )
     tight_layout()
-
-    path.mkdir(exist_ok=True, parents=True)
-
-    for file_format in ["svg", "png"]:
-
-        figure.savefig(fname=path.joinpath(figure_title + "." + file_format), format=file_format)
+    save_figure(figure=figure, figure_title="alpha partials", path=path)
