@@ -276,6 +276,53 @@ def load_love_numbers_for_partials_plot(
     return love_numbers, love_number_partials
 
 
+import numpy as np
+
+
+def fit_complex_affine(f, g):
+    """
+    Fit complex parameters a, b minimizing ||a*f + b - g||^2.
+
+    Parameters
+    ----------
+    f : array_like (complex)
+        Input array
+    g : array_like (complex)
+        Target array
+
+    Returns
+    -------
+    a : complex
+        Best-fit scaling factor
+    b : complex
+        Best-fit offset
+    rel_rms : float
+        Relative RMS error: ||fit - g|| / ||g||
+    """
+    f = np.asarray(f, dtype=np.complex128)
+    g = np.asarray(g, dtype=np.complex128)
+
+    if f.shape != g.shape:
+        raise ValueError("f and g must have the same shape")
+
+    # Build design matrix: [f, 1]
+    A = np.vstack([f, np.ones_like(f)]).T
+
+    # Solve least squares
+    x, residuals, rank, s = np.linalg.lstsq(A, g, rcond=None)
+    a, b = x
+
+    # Compute fitted values
+    g_fit = a * f + b
+
+    # Relative RMS error
+    rel_rms = np.linalg.norm(g_fit - g) / np.linalg.norm(g)
+
+    assert rel_rms < 5e-2
+
+    return complex(a), complex(b), 1 / complex(a), 1 / complex(b)
+
+
 def plot_love_number_partials(
     axes: Iterable[Iterable[Axes]],
     love_numbers: ndarray,
@@ -286,11 +333,24 @@ def plot_love_number_partials(
     """
     Plots love number partials against finite differences.
     """
+
     for ax_line, label, direction in zip(axes, "hlk", Direction):
 
-        for ax, part in zip(ax_line, COMPLEX_PARTS):
+        print(label)
 
-            for i_period, period in enumerate(periods_tab):
+        for i_period, period in enumerate(periods_tab):
+
+            a, b, inv_a, inv_b = fit_complex_affine(
+                f=love_number_partials[i_period, direction.value, :-1],
+                g=diff(a=love_numbers[i_period, direction.value, :]) / diff(a=alpha_tab),
+            )
+            print(" ", period)
+            print("  ", a)
+            print("  ", b)
+            print("  ", inv_a)
+            print("  ", inv_b)
+
+            for ax, part in zip(ax_line, COMPLEX_PARTS):
 
                 (line,) = ax.plot(
                     alpha_tab,
@@ -339,7 +399,7 @@ def test_compare_plot_semi_analytical_partials_to_finite_differences(
     models: Optional[dict[str, str]] = None,
     test_path: Path = TEST_ALPHA_PARTIAL_INTEGRATION_PATH,
     periods_tab: ndarray = PARTIAL_PERIOD_TAB,
-    alpha_tab: ndarray = ALPHA_TAB,
+    alpha_tab: ndarray = ALPHA_TAB[:13],
     path: Path = TEST_FIGURES_PATH,
 ) -> None:
     """
@@ -355,7 +415,7 @@ def test_compare_plot_semi_analytical_partials_to_finite_differences(
         models=models, test_path=test_path, periods_tab=periods_tab, alpha_tab=alpha_tab
     )
     figure, axes = subplots(3, 2, figsize=(7, 12), sharex=True)
-    suptitle(r"$\alpha$ partials")
+    suptitle(r"     $\alpha$ partials")
     plot_love_number_partials(
         axes=axes,
         love_numbers=love_numbers,
@@ -365,3 +425,8 @@ def test_compare_plot_semi_analytical_partials_to_finite_differences(
     )
     tight_layout()
     save_figure(figure=figure, figure_title="alpha partials", path=path)
+
+
+if __name__ == "__main__":
+
+    test_compare_plot_semi_analytical_partials_to_finite_differences()

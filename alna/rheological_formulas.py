@@ -130,9 +130,10 @@ def find_tau_m_sup(
     frequency_unit = 1 / period_unit
     tau_0 = 1.0  # (s).
 
-    return ((omega_m_inf * frequency_unit) ** (-alpha) - alpha * delta * q_mu * tau_0**alpha) ** (
-        1.0 / alpha
-    ) / period_unit
+    return (
+        (omega_m_inf * frequency_unit) ** (-alpha)
+        + alpha * q_mu * tau_0**alpha * delta / (delta + 1)
+    ) ** (1.0 / alpha) / period_unit
 
 
 def rewrite_alpha_integral(expression: Expr) -> Expr:

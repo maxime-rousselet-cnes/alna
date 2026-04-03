@@ -189,11 +189,12 @@ def test_integrate_viscous(
     )
 
 
-def test_integrate_alpha_partials(
+def test_integrate_partials(
     models: Optional[dict[str, str]] = None,
     test_path: Path = TEST_ALPHA_PARTIAL_INTEGRATION_PATH,
     periods_tab: ndarray = PARTIAL_PERIOD_TAB,
-    alpha_tab: ndarray = ALPHA_TAB,
+    parameter_tab: ndarray = ALPHA_TAB,
+    parameter: str = r"\alpha^{MANTLE_0}",
 ) -> None:
     """
     Integrates the partial derivative of Love numbers with respect to alpha to compare it to finite.
@@ -206,6 +207,17 @@ def test_integrate_alpha_partials(
     )
     solid_earth_numerical_model.compute_love_numbers(
         period_tab_per_degree={2: periods_tab},
-        parameters_to_invert_dictionary={r"\alpha^{MANTLE_0}": list(alpha_tab)},
+        parameters_to_invert_dictionary={parameter: list(parameter_tab)},
         path=test_path,
+    )
+
+
+if __name__ == "__main__":
+
+    test_integrate_partials()
+    test_integrate_partials(
+        test_path=TEST_SOLID_EARTH_NUMERICAL_MODEL_PATH.joinpath("rho partials"),
+        periods_tab=[1.0],
+        parameter_tab=linspace(start=7000, stop=9000, num=101),
+        parameter=r"\rho_0^{LOWER-MANTLE-1_0}",
     )
