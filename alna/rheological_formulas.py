@@ -16,7 +16,7 @@ from sympy import (
 )
 from sympy import pi as sympy_pi
 from sympy import symbols
-from sympy.core.numbers import Infinity, One, Zero
+from sympy.core.numbers import One, Zero
 
 from .parameters import DEFAULT_COMPONENT_PARAMETERS, ComponentParameters
 
@@ -182,18 +182,14 @@ def delta_mu_computing(mu_0: Expr, q_mu: Expr, f_attenuation: Expr) -> Expr:
     return (mu_0 / q_mu) * f_attenuation
 
 
-def mu_computing(mu_0: Expr, q_mu: Expr, f_attenuation: Expr, m_prime: Expr, b: Expr) -> Expr:
+def mu_computing(mu: Expr, m_prime: Expr, b: Expr) -> Expr:
     """
     Computes the complex analog mu value from available profiles.
+    Beware mu should be mu_0 + delta_mu, and m_prime and b viscoelastic transfert functions should
+    have been computed using mu and not mu_0.
     """
 
-    delta_mu = delta_mu_computing(
-        mu_0=mu_0,
-        q_mu=q_mu,
-        f_attenuation=f_attenuation,
-    )
-
-    return (mu_0 + delta_mu) * (1 - m_prime) / (1 + b)
+    return mu * (1 - m_prime) / (1 + b)
 
 
 def attenuation_function_computing(
@@ -243,6 +239,22 @@ def create_rheological_expressions(
         rho_0=expressions[r"\rho_0"], v_p=expressions[r"v_p"], mu_0=expressions[r"\mu_0"]
     )
 
+    if component_parameters.transient_component:
+
+        expressions[r"\mu"] = expressions[r"\mu_0"] + delta_mu_computing(
+            mu_0=expressions[r"\mu_0"],
+            q_mu=expressions[r"q_\mu"],
+            f_attenuation=attenuation_function_computing(
+                expressions=expressions,
+                units=units,
+                bounded_attenuation_functions=component_parameters.bounded_attenuation_functions,
+            ),
+        )
+
+    else:
+
+        expressions[r"\mu"] = expressions[r"\mu_0"]
+
     if not component_parameters.viscous_component:
 
         m_prime = Zero()
@@ -251,7 +263,7 @@ def create_rheological_expressions(
     else:
 
         maxwell_characteristic_pulsation = characteristic_pulsation_computing(
-            mu=expressions[r"\mu_0"], eta=expressions[r"\eta_m"]
+            mu=expressions[r"\mu"], eta=expressions[r"\eta_m"]
         )
         m_prime = m_prime_computing(
             maxwell_characteristic_pulsation=maxwell_characteristic_pulsation,
@@ -266,7 +278,10 @@ def create_rheological_expressions(
                     mu=mu_k_computing(
                         mu_k1=expressions[r"\mu_{k1}"],
                         c=expressions[r"c"],
-                        mu_0=expressions[r"\mu_0"],
+                        mu_0=expressions[
+                            r"\mu_0"
+                        ],  # Confusion between mu_0 and mu here, as we shouldn't cumulate Burgers
+                        # viscoelastic setting and attenuation-consistent transient regime.
                     ),
                     eta=expressions[r"\eta_k"],
                 ),
@@ -277,23 +292,8 @@ def create_rheological_expressions(
             )
         )
 
-    if not component_parameters.transient_component:
-
-        expressions[r"q_\mu"] = Infinity()
-        expressions[r"f_{attenuation}"] = Zero()
-
-    else:
-
-        expressions[r"f_{attenuation}"] = attenuation_function_computing(
-            expressions=expressions,
-            units=units,
-            bounded_attenuation_functions=component_parameters.bounded_attenuation_functions,
-        )
-
     expressions[r"\mu_{complex}"] = mu_computing(
-        mu_0=expressions[r"\mu_0"],
-        q_mu=expressions[r"q_\mu"],
-        f_attenuation=expressions[r"f_{attenuation}"],
+        mu=expressions[r"\mu"],
         m_prime=m_prime,
         b=b,
     )
