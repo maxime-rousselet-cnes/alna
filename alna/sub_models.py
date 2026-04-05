@@ -7,14 +7,13 @@ from typing import Optional
 
 from base_models import evaluate_terminal_parameters
 from numpy import inf, ndarray
-from sympy import Expr, Matrix, Symbol, hyper, lerchphi
+from sympy import Expr, Matrix, Symbol
 from sympy.core.numbers import Zero
 
 from .constants import LAYER_DECIMALS, Y_I_STATE_FOR_SURFACE, Y_I_STATE_VECTOR_LINE
 from .parameters import (
     DEFAULT_COMPONENT_PARAMETERS,
     DEFAULT_SOLID_EARTH_INTEGRATION_PARAMETERS,
-    ComponentParameters,
     IntegrationParameters,
     SolidEarthModelParameters,
 )
@@ -142,35 +141,6 @@ class LayerModel:
         ) ** n < integration_parameters.high_degrees_radius_sensibility
 
 
-def rewrite_lerchphi_to_hyper(expression: Expr) -> Expr:  # TODO
-    """
-    Fast, structure-aware rewrite replacing lerchphi(z, s, a)
-    with hypergeometric equivalents for s = 0, 1 or 2.
-    """
-
-    def rewrite(expr: Expr):
-
-        if isinstance(expr, lerchphi):
-
-            z, s, a = expr.args
-
-            if s == 0:
-
-                return 1 / (1 - z)
-
-            if s == 1:
-
-                return (1 / a) * hyper([1, a], [a + 1], z)
-
-            if s == 2:
-
-                return (1 / a**2) * hyper([1, 1, a], [2, a + 1], z)
-
-        return expr
-
-    return expression.replace(lambda e: isinstance(e, lerchphi), rewrite)
-
-
 class Expressions:
     """
     All sympy related attributes needed by a solid Earth numerical model.
@@ -183,7 +153,6 @@ class Expressions:
     def evaluate(
         self,
         expression: Expr | str,
-        component_parameters: Optional[ComponentParameters] = None,
         x: Optional[float] = None,
     ) -> Expr:
         """
@@ -197,10 +166,6 @@ class Expressions:
             parameter_expressions=self.parameter_expressions,
             terminal_parameter_values=self.terminal_parameter_values,
         )
-
-        if component_parameters is not None and component_parameters.transient_component:
-
-            evaluated_expression = rewrite_lerchphi_to_hyper(expression=evaluated_expression)
 
         return (
             evaluated_expression

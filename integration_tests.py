@@ -240,7 +240,7 @@ def test_integrate_partials(models: Optional[dict[str, str]] = None) -> None:
         parameter_tab=ETA_TAB,
         parameter=r"\eta_m^{UPPER-MANTLE_0}",
     )
-    # integrate_partials_per_parameter(models=models)
+    integrate_partials_per_parameter(models=models)
 
 
 if __name__ == "__main__":

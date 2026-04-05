@@ -369,7 +369,7 @@ class SolidEarthNumericalModel(BaseModel):
                     self.expressions.expressions[r"n"]: n,
                     self.expressions.expressions[r"\omega"]: omega / self.units[r"f"],
                 }
-            )
+            ).evalf()
 
             # Inner core layers.
             if i_layer < self.solid_earth_parameters.model.structure_parameters.i_layer_icb:
@@ -540,13 +540,17 @@ class SolidEarthNumericalModel(BaseModel):
             self.layer_models[self.solid_earth_parameters.model.structure_parameters.i_layer_cmb :]
         ):
 
-            partial_propagator = layer_model.partial_propagators[parameter].xreplace(
-                rule={
-                    self.expressions.expressions[r"n"]: integration_context.n,
-                    # Uses unitless pulsation for integration.
-                    self.expressions.expressions[r"\omega"]: integration_context.omega
-                    / self.units[r"f"],
-                }
+            partial_propagator = (
+                layer_model.partial_propagators[parameter]
+                .xreplace(
+                    rule={
+                        self.expressions.expressions[r"n"]: integration_context.n,
+                        # Uses unitless pulsation for integration.
+                        self.expressions.expressions[r"\omega"]: integration_context.omega
+                        / self.units[r"f"],
+                    }
+                )
+                .evalf()
             )
 
             for i_boundary_condition, (x_tab, y_tab) in enumerate(
@@ -606,13 +610,16 @@ class SolidEarthNumericalModel(BaseModel):
 
             for y_i_state_line_for_surface in Y_I_STATE_FOR_SURFACE:
 
-                partial_expressions, _ = partial_symbols(
-                    parameter=self.expressions.parameter_expressions[parameter],
-                    state_vector_line=y_i_state_line_for_surface,
-                )
-                y_i_all_partial_symbols[parameter] += [partial_expressions]
+                y_i_all_partial_symbols[parameter] += [
+                    partial_symbols(
+                        parameter=self.expressions.parameter_expressions[parameter],
+                        state_vector_line=y_i_state_line_for_surface,
+                    )[0]
+                ]
 
-                for y_i, y_i_partial in zip(y_i_state_line_for_surface, partial_expressions):
+                for y_i, y_i_partial in zip(
+                    y_i_state_line_for_surface, y_i_all_partial_symbols[parameter][-1]
+                ):
 
                     self.expressions.expressions[
                         r"\frac{\partial L_n}{\partial " + parameter + "}"
@@ -684,13 +691,11 @@ class SolidEarthNumericalModel(BaseModel):
             for parameter in parameters_to_invert:
 
                 layer_model.partial_propagators[parameter] = self.expressions.evaluate(
-                    expression=general_partial_propagators_per_layer[i_layer][parameter],
-                    component_parameters=self.solid_earth_parameters.model.component_parameters,
+                    expression=general_partial_propagators_per_layer[i_layer][parameter]
                 )
 
             layer_model.propagator = self.expressions.evaluate(
-                expression=general_propagators_per_layer[i_layer],
-                component_parameters=self.solid_earth_parameters.model.component_parameters,
+                expression=general_propagators_per_layer[i_layer]
             )
 
     def compute_love_numbers(

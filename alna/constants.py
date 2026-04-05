@@ -5,8 +5,7 @@ Numerical constants.
 from pathlib import Path
 
 from base_models import DATA_PATH, SOLID_EARTH_MODEL_PROFILES
-from mpmath import lerchphi
-from numpy import arange, array, concatenate, ndarray, pi
+from numpy import arange, array, asarray, concatenate, ndarray, ones_like, pi, zeros_like
 from sympy import Expr, symbols
 
 ### Solid Earth model descriptions.
@@ -56,9 +55,166 @@ Y_I_STATE_FOR_SURFACE: list[list[Expr]] = [
     )
     for i_line in range(3)
 ]
+
+
+def lerchphi_s1(z: complex, a: float, tol: float = 1e-12, maxiter: int = 200):
+    """
+    Numerical approximation of the Lerch transcendant function for special case s = 2.
+    """
+
+    z = asarray(z, dtype=complex)
+    out = zeros_like(z, dtype=complex)
+    absz = abs(z)
+    mask_small = absz < 0.8
+
+    if any(mask_small):
+
+        zz = z[mask_small]
+        zk = ones_like(zz)
+        s = zk / a
+
+        for k in range(1, maxiter):
+
+            zk *= zz
+            term = zk / (k + a)
+            s += term
+
+            if max(abs(term)) < tol:
+
+                break
+
+        out[mask_small] = s
+
+    mask_large = absz > 1.2
+
+    if any(mask_large):
+
+        zz = z[mask_large]
+        w = 1.0 / zz
+        zk = ones_like(w)
+        s = zk / a
+
+        for k in range(1, maxiter):
+
+            zk *= w
+            term = zk / (k + a)
+            s += term
+
+            if max(abs(term)) < tol:
+
+                break
+
+        out[mask_large] = (zz ** (-a)) * s
+
+    mask_mid = ~(mask_small | mask_large)
+
+    if any(mask_mid):
+
+        zz = z[mask_mid]
+        zk = ones_like(zz)
+        s = zk / a
+
+        for k in range(1, 60):  # Fixed cutoff for stability.
+
+            zk *= zz
+            s += zk / (k + a)
+
+        out[mask_mid] = s
+
+    return out
+
+
+def lerchphi_s2(z: complex, a: float, tol: float = 1e-12, maxiter: int = 200):
+    """
+    Numerical approximation of the Lerch transcendant function for special case s = 2.
+    """
+
+    z = asarray(z, dtype=complex)
+    out = zeros_like(z, dtype=complex)
+    absz = abs(z)
+    mask_small = absz < 0.8
+
+    if any(mask_small):
+
+        zz = z[mask_small]
+        zk = ones_like(zz)
+        s = zk / (a**2)
+
+        for k in range(1, maxiter):
+
+            zk *= zz
+            term = zk / (k + a) ** 2
+            s += term
+
+            if max(abs(term)) < tol:
+
+                break
+
+        out[mask_small] = s
+
+    mask_large = absz > 1.2
+
+    if any(mask_large):
+
+        zz = z[mask_large]
+        w = 1.0 / zz
+        zk = ones_like(w)
+        s = zk / (a**2)
+
+        for k in range(1, maxiter):
+
+            zk *= w
+            term = zk / (k + a) ** 2
+            s += term
+
+            if max(abs(term)) < tol:
+
+                break
+
+        out[mask_large] = (zz ** (-a)) * s
+
+    mask_mid = ~(mask_small | mask_large)
+
+    if any(mask_mid):
+
+        zz = z[mask_mid]
+        zk = ones_like(zz)
+        s = zk / (a**2)
+
+        for k in range(1, 80):  # Slightly longer for s = 2.
+
+            zk *= zz
+            s += zk / (k + a) ** 2
+
+        out[mask_mid] = s
+
+    return out
+
+
+def lerchphi_numpy(z, s, a):
+    """
+    Fast numerical equivalences for Lerch transcendant function in special cases.
+    """
+
+    if s == 0:
+
+        return 1.0 / (1.0 - z)
+
+    if s == 1:
+
+        return lerchphi_s1(z, a)
+
+    if s == 2:
+
+        return lerchphi_s2(z, a)
+
+    raise NotImplementedError("Only s = {0, 1, 2} supported")
+
+
 SYMPY_COMPILATION_MODULES_TRANSIENT_FRIENDLY = [
-    {"lerchphi": lambda a, b, z: lerchphi(a, b, z)},
+    {"lerchphi": lerchphi_numpy},
     "numpy",
+    {"hyper": lambda *args: (_ for _ in ()).throw(NotImplementedError("Unexpected hyper"))},
 ]
 
 # Other low level parameters.

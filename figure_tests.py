@@ -354,10 +354,10 @@ def plot_love_number_partials(
 
 def compare_plot_semi_analytical_partials_to_finite_differences(
     models: Optional[dict[str, str]] = None,
+    parameter: str = r"\alpha^{MANTLE_0}",
     test_path: Path = TEST_ALPHA_PARTIAL_INTEGRATION_PATH,
     periods_tab: ndarray = PARTIAL_PERIOD_TAB,
-    parameter_tab: ndarray = ALPHA_TAB[:12],
-    parameter: str = r"\alpha^{MANTLE_0}",
+    parameter_tab: ndarray = ALPHA_TAB,
 ) -> None:
     """
     Generates a figure of 3 subplots as a function of degree and period, for h', l', and k'.
@@ -399,21 +399,18 @@ def test_compare_plot_semi_analytical_partials_to_finite_differences(
 
     compare_plot_semi_analytical_partials_to_finite_differences(
         models=models,
+        parameter=r"\rho_0^{LOWER-MANTLE-1_0}",
         test_path=TEST_RHO_PARTIAL_INTEGRATION_PATH,
         periods_tab=ELASTIC_PERIOD_TAB,
         parameter_tab=RHO_TAB,
-        parameter=r"\rho_0^{LOWER-MANTLE-1_0}",
     )
     compare_plot_semi_analytical_partials_to_finite_differences(
         models=models,
+        parameter=r"\eta_m^{UPPER-MANTLE_0}",
         test_path=TEST_ETA_PARTIAL_INTEGRATION_PATH,
         periods_tab=ETA_PERIOD_TAB,
         parameter_tab=ETA_TAB,
-        parameter=r"\eta_m^{UPPER-MANTLE_0}",
     )
-    # compare_plot_semi_analytical_partials_to_finite_differences(models=models)
-
-
-if __name__ == "__main__":
-
-    test_compare_plot_semi_analytical_partials_to_finite_differences()
+    compare_plot_semi_analytical_partials_to_finite_differences(
+        models=models, parameter_tab=ALPHA_TAB[:63]
+    )
