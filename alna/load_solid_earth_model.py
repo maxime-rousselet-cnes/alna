@@ -17,6 +17,7 @@ def load_solid_earth_numerical_model(
     name: str,
     path: Path = SOLID_EARTH_NUMERICAL_MODELS_PATH,
     force_transient: Optional[bool] = None,
+    force_viscous: Optional[bool] = None,
 ) -> SolidEarthNumericalModel:
     """
     Loads a solid Earth numerical model and formats its expressions.
@@ -66,10 +67,16 @@ def load_solid_earth_numerical_model(
             for quantity, polynomial in layer_model["parameter_symbols"].items()
         }
 
+    model = solid_earth_numerical_model.solid_earth_parameters.model
+
     if force_transient is not None:
 
-        model = solid_earth_numerical_model.solid_earth_parameters.model
         model.component_parameters.transient_component = force_transient
-        solid_earth_numerical_model.solid_earth_parameters.model = model
+
+    if force_viscous is not None:
+
+        model.component_parameters.viscous_component = force_viscous
+
+    solid_earth_numerical_model.solid_earth_parameters.model = model
 
     return solid_earth_numerical_model

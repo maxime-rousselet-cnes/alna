@@ -102,6 +102,7 @@ class IntegrationParameters(BaseModel):
         float  # Integrates starting whenever x**n > high_degrees_radius_sensibility.
     ) = 1.0e-4
     minimal_radius: float = 1.0e3  # r ~= 0 km exact definition (m).
+    minimal_layer_radius_factor: float = 1.0
     atol: float = 1.0e-14  # The solver keeps the local error estimates under atol + rtol * abs(yr).
     rtol: float = 1.0e-10  # See atol parameter description.
 

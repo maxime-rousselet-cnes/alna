@@ -21,15 +21,23 @@ from numpy import array, diff, log10, meshgrid, ndarray, zeros
 from alna import (
     COMPLEX_PARTS,
     SOLID_EARTH_NUMERICAL_MODEL_PART_NAMES_SEPARATOR,
+    ComponentParameters,
     build_base_name,
     compose_name_with_invertible_parameters,
+    format_name_function,
     load_solid_earth_numerical_model,
 )
 from integration_tests import (
     ALPHA_TAB,
+    ELASTIC_PERIOD_TAB,
+    ETA_PERIOD_TAB,
+    ETA_TAB,
     PARTIAL_PERIOD_TAB,
+    RHO_TAB,
     TEST_ALPHA_PARTIAL_INTEGRATION_PATH,
     TEST_ELASTIC_INTEGRATION_PATH,
+    TEST_ETA_PARTIAL_INTEGRATION_PATH,
+    TEST_RHO_PARTIAL_INTEGRATION_PATH,
     TEST_VISCOUS_INTEGRATION_PATH,
     VISCOUS_PERIOD_TAB,
     load_reference_love_numbers_for_validation,
@@ -234,93 +242,54 @@ def test_compare_plot_viscous_to_elastic(
 
 
 def load_love_numbers_for_partials_plot(
-    models: dict[str, str], test_path: Path, periods_tab: ndarray, alpha_tab: ndarray
+    models: dict[str, str],
+    test_path: Path,
+    periods_tab: ndarray,
+    parameter_tab: ndarray,
+    parameter: str,
 ) -> tuple[ndarray, ndarray]:
     """
-    Load love numbers and their partials for all alpha values.
+    Load love numbers and their partials for all parameter values.
     """
 
-    love_numbers = zeros(shape=(len(periods_tab), 3, len(alpha_tab)), dtype=complex)
-    love_number_partials = zeros(shape=(len(periods_tab), 3, len(alpha_tab)), dtype=complex)
-    alpha_parameter_name = r"\alpha^{MANTLE_0}"
+    love_numbers = zeros(shape=(len(periods_tab), 3, len(parameter_tab)), dtype=complex)
+    love_number_partials = zeros(shape=(len(periods_tab), 3, len(parameter_tab)), dtype=complex)
 
-    for i_alpha, alpha in enumerate(alpha_tab):
+    for i_parameter, parameter_value in enumerate(parameter_tab):
 
         solid_earth_numerical_model = load_solid_earth_numerical_model(
             name=compose_name_with_invertible_parameters(
-                name=build_base_name(models=models),
-                parameters_to_invert=[alpha_parameter_name],
-                invertible_parameter_tab=[alpha],
+                name=format_name_function(
+                    name=build_base_name(models=models),
+                    component_parameters=ComponentParameters(
+                        viscous_component="eta" in parameter,
+                        transient_component="alpha" in parameter or "delta" in parameter,
+                        bounded_attenuation_functions=True,
+                    ),
+                ),
+                parameters_to_invert=[parameter],
+                invertible_parameter_tab=[parameter_value],
             ),
             path=test_path,
         )
-        love_numbers[:, :, i_alpha] = (
-            solid_earth_numerical_model.love_numbers["real"][2][
-                :, BoundaryCondition.POTENTIAL.value, :
-            ]
+        love_numbers[:, :, i_parameter] = (
+            solid_earth_numerical_model.love_numbers["real"][2][:, BoundaryCondition.LOAD.value, :]
             + 1j
             * solid_earth_numerical_model.love_numbers["imag"][2][
-                :, BoundaryCondition.POTENTIAL.value, :
+                :, BoundaryCondition.LOAD.value, :
             ]
         )
-        love_number_partials[:, :, i_alpha] = (
-            solid_earth_numerical_model.love_number_partials["real"][alpha_parameter_name][2][
-                :, BoundaryCondition.POTENTIAL.value, :
+        love_number_partials[:, :, i_parameter] = (
+            solid_earth_numerical_model.love_number_partials["real"][parameter][2][
+                :, BoundaryCondition.LOAD.value, :
             ]
             + 1j
-            * solid_earth_numerical_model.love_number_partials["imag"][alpha_parameter_name][2][
-                :, BoundaryCondition.POTENTIAL.value, :
+            * solid_earth_numerical_model.love_number_partials["imag"][parameter][2][
+                :, BoundaryCondition.LOAD.value, :
             ]
         )
 
     return love_numbers, love_number_partials
-
-
-import numpy as np
-
-
-def fit_complex_affine(f, g):
-    """
-    Fit complex parameters a, b minimizing ||a*f + b - g||^2.
-
-    Parameters
-    ----------
-    f : array_like (complex)
-        Input array
-    g : array_like (complex)
-        Target array
-
-    Returns
-    -------
-    a : complex
-        Best-fit scaling factor
-    b : complex
-        Best-fit offset
-    rel_rms : float
-        Relative RMS error: ||fit - g|| / ||g||
-    """
-    f = np.asarray(f, dtype=np.complex128)
-    g = np.asarray(g, dtype=np.complex128)
-
-    if f.shape != g.shape:
-        raise ValueError("f and g must have the same shape")
-
-    # Build design matrix: [f, 1]
-    A = np.vstack([f, np.ones_like(f)]).T
-
-    # Solve least squares
-    x, residuals, rank, s = np.linalg.lstsq(A, g, rcond=None)
-    a, b = x
-
-    # Compute fitted values
-    g_fit = a * f + b
-
-    # Relative RMS error
-    rel_rms = np.linalg.norm(g_fit - g) / np.linalg.norm(g)
-
-    assert rel_rms < 5e-2
-
-    return complex(a), complex(b), 1 / complex(a), 1 / complex(b)
 
 
 def plot_love_number_partials(
@@ -328,7 +297,7 @@ def plot_love_number_partials(
     love_numbers: ndarray,
     love_number_partials: ndarray,
     periods_tab: ndarray,
-    alpha_tab: ndarray,
+    parameter_tab: ndarray,
 ) -> None:
     """
     Plots love number partials against finite differences.
@@ -336,24 +305,12 @@ def plot_love_number_partials(
 
     for ax_line, label, direction in zip(axes, "hlk", Direction):
 
-        print(label)
+        for ax, part in zip(ax_line, COMPLEX_PARTS):
 
-        for i_period, period in enumerate(periods_tab):
-
-            a, b, inv_a, inv_b = fit_complex_affine(
-                f=love_number_partials[i_period, direction.value, :-1],
-                g=diff(a=love_numbers[i_period, direction.value, :]) / diff(a=alpha_tab),
-            )
-            print(" ", period)
-            print("  ", a)
-            print("  ", b)
-            print("  ", inv_a)
-            print("  ", inv_b)
-
-            for ax, part in zip(ax_line, COMPLEX_PARTS):
+            for i_period, period in enumerate(periods_tab):
 
                 (line,) = ax.plot(
-                    alpha_tab,
+                    parameter_tab,
                     (
                         love_number_partials[i_period, direction.value, :].real
                         if part == "real"
@@ -363,7 +320,7 @@ def plot_love_number_partials(
                     linestyle="-",
                 )
                 ax.plot(
-                    alpha_tab[:-1] + diff(a=alpha_tab) / 2,
+                    parameter_tab[:-1] + diff(a=parameter_tab) / 2,
                     diff(
                         a=(
                             love_numbers[i_period, direction.value, :].real
@@ -371,36 +328,36 @@ def plot_love_number_partials(
                             else love_numbers[i_period, direction.value, :].imag
                         )
                     )
-                    / diff(a=alpha_tab),
+                    / diff(parameter_tab),
                     color=line.get_color(),
                     linestyle="--",
                 )
 
-            if part == "real":
-
-                ax.set_ylabel(r"$\frac{\partial " + label + r"'_2}{\partial \alpha}$")
-                ax.tick_params(labelbottom=False)
-
-            if label == "k":
-
-                ax.tick_params(labelbottom=True)
-                ax.set_xlabel(r"$\alpha$")
-
-            elif label == "h":
-
                 if part == "real":
 
-                    ax.legend()
+                    ax.set_ylabel(r"$\frac{\partial " + label + r"'_2}{\partial p}$")
+                    ax.tick_params(labelbottom=False)
 
-                ax.set_title("Real part" if part == "real" else "Imaginary part")
+                if label == "k":
+
+                    ax.tick_params(labelbottom=True)
+                    ax.set_xlabel(r"$p$")
+
+                elif label == "h":
+
+                    if part == "real":
+
+                        ax.legend()
+
+                    ax.set_title("Real part" if part == "real" else "Imaginary part")
 
 
-def test_compare_plot_semi_analytical_partials_to_finite_differences(
+def compare_plot_semi_analytical_partials_to_finite_differences(
     models: Optional[dict[str, str]] = None,
     test_path: Path = TEST_ALPHA_PARTIAL_INTEGRATION_PATH,
     periods_tab: ndarray = PARTIAL_PERIOD_TAB,
-    alpha_tab: ndarray = ALPHA_TAB[:13],
-    path: Path = TEST_FIGURES_PATH,
+    parameter_tab: ndarray = ALPHA_TAB[:12],
+    parameter: str = r"\alpha^{MANTLE_0}",
 ) -> None:
     """
     Generates a figure of 3 subplots as a function of degree and period, for h', l', and k'.
@@ -411,20 +368,50 @@ def test_compare_plot_semi_analytical_partials_to_finite_differences(
 
         models = DEFAULT_MODELS
 
+    path = TEST_FIGURES_PATH
     love_numbers, love_number_partials = load_love_numbers_for_partials_plot(
-        models=models, test_path=test_path, periods_tab=periods_tab, alpha_tab=alpha_tab
+        models=models,
+        test_path=test_path,
+        periods_tab=periods_tab,
+        parameter_tab=parameter_tab,
+        parameter=parameter,
     )
     figure, axes = subplots(3, 2, figsize=(7, 12), sharex=True)
-    suptitle(r"     $\alpha$ partials")
+    suptitle("        $" + parameter + "$ partials")
     plot_love_number_partials(
         axes=axes,
         love_numbers=love_numbers,
         love_number_partials=love_number_partials,
         periods_tab=periods_tab,
-        alpha_tab=alpha_tab,
+        parameter_tab=parameter_tab,
     )
     tight_layout()
-    save_figure(figure=figure, figure_title="alpha partials", path=path)
+    save_figure(figure=figure, figure_title=parameter + " partials", path=path)
+
+
+def test_compare_plot_semi_analytical_partials_to_finite_differences(
+    models: Optional[dict[str, str]] = None,
+) -> None:
+    """
+    Shows consistence of the methods between each other for an elastic parameter, a viscous
+    parameter and a transient parameter.
+    """
+
+    compare_plot_semi_analytical_partials_to_finite_differences(
+        models=models,
+        test_path=TEST_RHO_PARTIAL_INTEGRATION_PATH,
+        periods_tab=ELASTIC_PERIOD_TAB,
+        parameter_tab=RHO_TAB,
+        parameter=r"\rho_0^{LOWER-MANTLE-1_0}",
+    )
+    compare_plot_semi_analytical_partials_to_finite_differences(
+        models=models,
+        test_path=TEST_ETA_PARTIAL_INTEGRATION_PATH,
+        periods_tab=ETA_PERIOD_TAB,
+        parameter_tab=ETA_TAB,
+        parameter=r"\eta_m^{UPPER-MANTLE_0}",
+    )
+    # compare_plot_semi_analytical_partials_to_finite_differences(models=models)
 
 
 if __name__ == "__main__":

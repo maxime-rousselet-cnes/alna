@@ -40,7 +40,12 @@ TEST_VISCOUS_INTEGRATION_PATH = TEST_SOLID_EARTH_NUMERICAL_MODEL_PATH.joinpath(
 TEST_ALPHA_PARTIAL_INTEGRATION_PATH = TEST_SOLID_EARTH_NUMERICAL_MODEL_PATH.joinpath(
     "alpha_partials"
 )
+TEST_RHO_PARTIAL_INTEGRATION_PATH = TEST_SOLID_EARTH_NUMERICAL_MODEL_PATH.joinpath("rho_partials")
+TEST_ETA_PARTIAL_INTEGRATION_PATH = TEST_SOLID_EARTH_NUMERICAL_MODEL_PATH.joinpath("eta_partials")
+ETA_PERIOD_TAB = array(object=[1, 10, 100])
+ETA_TAB = linspace(start=1e18, stop=1e19, num=11)
 ALPHA_TAB = linspace(start=0.2, stop=0.3, num=101)
+RHO_TAB = linspace(start=7000, stop=9000, num=101)
 
 
 def load_reference_love_number_file_for_validation(file_path: Path) -> tuple[list[int], ndarray]:
@@ -189,7 +194,7 @@ def test_integrate_viscous(
     )
 
 
-def test_integrate_partials(
+def integrate_partials_per_parameter(
     models: Optional[dict[str, str]] = None,
     test_path: Path = TEST_ALPHA_PARTIAL_INTEGRATION_PATH,
     periods_tab: ndarray = PARTIAL_PERIOD_TAB,
@@ -197,13 +202,16 @@ def test_integrate_partials(
     parameter: str = r"\alpha^{MANTLE_0}",
 ) -> None:
     """
-    Integrates the partial derivative of Love numbers with respect to alpha to compare it to finite.
-    differences.
+    Integrates the partial derivative of Love numbers with respect to a parameter to compare it to
+    finite differences.
     """
 
     models = initialize_test(models=models, test_path=test_path)
     solid_earth_numerical_model = load_solid_earth_numerical_model(
-        name=build_base_name(models=models), path=test_path.parent, force_transient=True
+        name=build_base_name(models=models),
+        path=test_path.parent,
+        force_transient="alpha" in parameter or "delta" in parameter,
+        force_viscous="eta_m" in parameter,
     )
     solid_earth_numerical_model.compute_love_numbers(
         period_tab_per_degree={2: periods_tab},
@@ -212,12 +220,29 @@ def test_integrate_partials(
     )
 
 
+def test_integrate_partials(models: Optional[dict[str, str]] = None) -> None:
+    """
+    Integrates partiel to compare to finite differences, for an elastic parameter, a viscous
+    parameter and a transient parameter.
+    """
+
+    integrate_partials_per_parameter(
+        models=models,
+        test_path=TEST_RHO_PARTIAL_INTEGRATION_PATH,
+        periods_tab=ELASTIC_PERIOD_TAB,
+        parameter_tab=RHO_TAB,
+        parameter=r"\rho_0^{LOWER-MANTLE-1_0}",
+    )
+    integrate_partials_per_parameter(
+        models=models,
+        test_path=TEST_ETA_PARTIAL_INTEGRATION_PATH,
+        periods_tab=ETA_PERIOD_TAB,
+        parameter_tab=ETA_TAB,
+        parameter=r"\eta_m^{UPPER-MANTLE_0}",
+    )
+    # integrate_partials_per_parameter(models=models)
+
+
 if __name__ == "__main__":
 
     test_integrate_partials()
-    test_integrate_partials(
-        test_path=TEST_SOLID_EARTH_NUMERICAL_MODEL_PATH.joinpath("rho partials"),
-        periods_tab=[1.0],
-        parameter_tab=linspace(start=7000, stop=9000, num=101),
-        parameter=r"\rho_0^{LOWER-MANTLE-1_0}",
-    )

@@ -33,9 +33,37 @@ from .constants import (
     G,
     compute_omega_tab,
 )
-from .parameters import SolidEarthParameters
+from .parameters import ComponentParameters, SolidEarthParameters
 from .rheological_formulas import fluid_to_solid, solid_to_fluid
 from .sub_models import Expressions, IntegrationContext, LayerModel
+
+
+def format_name_function(name: str, component_parameters: ComponentParameters) -> str:
+    """
+    Eventually renames the model for clarity and separability of tests in directories.
+    """
+
+    suffix = ""
+
+    if not component_parameters.transient_component:
+
+        suffix += SOLID_EARTH_NUMERICAL_MODEL_PART_NAMES_SEPARATOR + "no_transient"
+
+    elif not component_parameters.bounded_attenuation_functions:
+
+        suffix += (
+            SOLID_EARTH_NUMERICAL_MODEL_PART_NAMES_SEPARATOR + "no_bounded_attenuation_functions"
+        )
+
+    if not component_parameters.viscous_component:
+
+        suffix += SOLID_EARTH_NUMERICAL_MODEL_PART_NAMES_SEPARATOR + "no_viscous"
+
+    if not name.endswith(suffix):
+
+        name += suffix
+
+    return name
 
 
 def compose_name_with_invertible_parameters(
@@ -280,6 +308,14 @@ class SolidEarthNumericalModel(BaseModel):
 
             return array(object=[self.layer_models[i_layer].r_inf]), array(object=[y_i])
 
+        x_inf = (
+            max(
+                self.layer_models[i_layer].r_inf,
+                self.solid_earth_parameters.integration_parameters.minimal_radius,
+            )
+            / self.solid_earth_parameters.model.radius_unit
+        )
+        x_sup = self.layer_models[i_layer].r_sup / self.solid_earth_parameters.model.radius_unit
         i_layer_icb = self.solid_earth_parameters.model.structure_parameters.i_layer_icb
         x, y = adaptive_runge_kutta_45(
             fun=lambdify(
@@ -301,13 +337,10 @@ class SolidEarthNumericalModel(BaseModel):
                 modules=SYMPY_COMPILATION_MODULES_TRANSIENT_FRIENDLY,
             ),
             t_bounds=(
-                max(
-                    self.layer_models[i_layer].r_inf,
-                    self.solid_earth_parameters.integration_parameters.minimal_radius,
-                )
-                / self.solid_earth_parameters.model.radius_unit,
-                self.layer_models[i_layer].r_sup / self.solid_earth_parameters.model.radius_unit,
-                inf,
+                x_inf,
+                x_sup,
+                (x_sup - x_inf)
+                / self.solid_earth_parameters.integration_parameters.minimal_layer_radius_factor,
             ),
             y_0=y_i,
         )
@@ -566,40 +599,33 @@ class SolidEarthNumericalModel(BaseModel):
 
             y_i_all_partial_symbols[parameter] = []
             self.expressions.expressions[r"\frac{\partial L_n}{\partial " + parameter + "}"] = (
-                -2  # Because same term will be added three times below.
-                * (
-                    self.expressions.expressions[r"L_n"].diff(
-                        self.expressions.parameter_expressions[parameter]
-                    )
+                self.expressions.expressions[r"L_n"].diff(
+                    self.expressions.parameter_expressions[parameter]
                 )
             )
 
             for y_i_state_line_for_surface in Y_I_STATE_FOR_SURFACE:
 
-                partial_expressions, partials_matrix_for_parameter = partial_symbols(
+                partial_expressions, _ = partial_symbols(
                     parameter=self.expressions.parameter_expressions[parameter],
                     state_vector_line=y_i_state_line_for_surface,
-                )
-                self.expressions.expressions[
-                    r"\frac{\partial L_n}{\partial " + parameter + "}"
-                ] += vector_variation_equation(
-                    dynamic=self.expressions.expressions[r"L_n"],
-                    parameter=self.expressions.parameter_expressions[parameter],
-                    partials=partials_matrix_for_parameter,
-                    state_vector_line=y_i_state_line_for_surface,
-                ).reshape(
-                    rows=3, cols=3
                 )
                 y_i_all_partial_symbols[parameter] += [partial_expressions]
+
+                for y_i, y_i_partial in zip(y_i_state_line_for_surface, partial_expressions):
+
+                    self.expressions.expressions[
+                        r"\frac{\partial L_n}{\partial " + parameter + "}"
+                    ] += y_i_partial * self.expressions.expressions[r"L_n"].diff(y_i)
 
             self.expressions.expressions[r"\frac{\partial L_n}{\partial " + parameter + "}"] = (
                 self.expressions.evaluate(
                     expression=self.expressions.expressions[
                         r"\frac{\partial L_n}{\partial " + parameter + "}"
-                    ],
+                    ].doit(),
                     x=1,
                 )
-            ).doit()
+            )
 
         # Apply numerical values so that only the (3, 6) y_i remain.
         self.expressions.expressions[r"L_n"] = self.expressions.evaluate(
@@ -625,34 +651,6 @@ class SolidEarthNumericalModel(BaseModel):
                     partial_expressions_per_parameter=partial_expressions_per_parameter,
                     y_i_all_partial_symbols=y_i_all_partial_symbols,
                 )
-
-    def format_name(self) -> None:
-        """
-        Eventually renames the model for clarity and separability of tests in directories.
-        """
-
-        suffix = ""
-
-        if not self.solid_earth_parameters.model.component_parameters.transient_component:
-
-            suffix += SOLID_EARTH_NUMERICAL_MODEL_PART_NAMES_SEPARATOR + "no_transient"
-
-        elif (
-            not self.solid_earth_parameters.model.component_parameters.bounded_attenuation_functions
-        ):
-
-            suffix += (
-                SOLID_EARTH_NUMERICAL_MODEL_PART_NAMES_SEPARATOR
-                + "no_bounded_attenuation_functions"
-            )
-
-        if not self.solid_earth_parameters.model.component_parameters.viscous_component:
-
-            suffix += SOLID_EARTH_NUMERICAL_MODEL_PART_NAMES_SEPARATOR + "no_viscous"
-
-        if not self.name.endswith(suffix):
-
-            self.name += suffix
 
     def prepare_all_propagators(
         self,
@@ -708,7 +706,10 @@ class SolidEarthNumericalModel(BaseModel):
 
         if format_name:
 
-            self.format_name()
+            self.name = format_name_function(
+                name=self.name,
+                component_parameters=self.solid_earth_parameters.model.component_parameters,
+            )
 
         parameters_to_invert = (
             []

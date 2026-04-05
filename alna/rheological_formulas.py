@@ -70,7 +70,7 @@ def characteristic_pulsation_computing(mu: Expr, eta: Expr) -> Expr:
 def m_prime_computing(maxwell_characteristic_pulsation: Expr, omega: Expr) -> Expr:
     """
     Computes m' transfert function value given the Maxwell's characteristic frequency and pulsation
-    value omega * j.
+    value omega.
     """
 
     return maxwell_characteristic_pulsation / (maxwell_characteristic_pulsation + omega * I)

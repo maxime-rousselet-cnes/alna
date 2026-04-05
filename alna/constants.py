@@ -5,9 +5,9 @@ Numerical constants.
 from pathlib import Path
 
 from base_models import DATA_PATH, SOLID_EARTH_MODEL_PROFILES
+from mpmath import lerchphi
 from numpy import arange, array, concatenate, ndarray, pi
-from scipy import special
-from sympy import symbols
+from sympy import Expr, symbols
 
 ### Solid Earth model descriptions.
 SOLID_EARTH_MODEL_PROFILE_DESCRIPTIONS_ROOT_PATH = Path("../alna").joinpath(
@@ -46,7 +46,7 @@ INITIAL_Y_I = (
     ),
 )
 Y_I_STATE_VECTOR_LINE = list(symbols(r"y_1 y_2 y_3 y_4 y_5 y_6"))
-Y_I_STATE_FOR_SURFACE = [
+Y_I_STATE_FOR_SURFACE: list[list[Expr]] = [
     list(
         symbols(
             r" ".join(
@@ -57,8 +57,7 @@ Y_I_STATE_FOR_SURFACE = [
     for i_line in range(3)
 ]
 SYMPY_COMPILATION_MODULES_TRANSIENT_FRIENDLY = [
-    # pylint: disable=no-member
-    {"hyper": lambda num, den, arg: special.hyp2f1(num[0], num[1], den[0], arg)},
+    {"lerchphi": lambda a, b, z: lerchphi(a, b, z)},
     "numpy",
 ]
 

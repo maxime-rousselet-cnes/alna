@@ -142,10 +142,10 @@ class LayerModel:
         ) ** n < integration_parameters.high_degrees_radius_sensibility
 
 
-def rewrite_lerchphi_to_hyper(expression: Expr) -> Expr:
+def rewrite_lerchphi_to_hyper(expression: Expr) -> Expr:  # TODO
     """
     Fast, structure-aware rewrite replacing lerchphi(z, s, a)
-    with hypergeometric equivalents for s = 1 or 2.
+    with hypergeometric equivalents for s = 0, 1 or 2.
     """
 
     def rewrite(expr: Expr):

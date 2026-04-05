@@ -19,6 +19,7 @@
     "integration_parameters": {
         "high_degrees_radius_sensibility": 1.0e-4,
         "minimal_radius": 1.0e3,
+        "minimal_layer_radius_factor":20,
         "atol": 1.0e-14,
         "rtol": 1.0e-10
     },

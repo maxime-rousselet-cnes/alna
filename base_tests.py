@@ -295,6 +295,7 @@ def test_partials(
         name=build_base_name(models=models),
         path=test_path.parent,
         force_transient=True,
+        force_viscous=True,
     )
     solid_earth_numerical_model.compute_love_numbers(
         period_tab_per_degree={2: periods_tab},
