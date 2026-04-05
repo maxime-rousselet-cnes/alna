@@ -10,9 +10,7 @@
         "structure_parameters": {
             "dynamic_term": true,
             "i_layer_icb": null,
-            "i_layer_cmb": null,
-            "asymptotic_compressibility": false,
-            "drho_dx_epsilon": 1.0e-10
+            "i_layer_cmb": null
         }
     },
     "n_max": 10000,
@@ -22,10 +20,5 @@
         "minimal_layer_radius_factor":20,
         "atol": 1.0e-14,
         "rtol": 1.0e-10
-    },
-    "options": {
-        "model_id": null,
-        "save": true,
-        "overwrite_model": false
     }
 }

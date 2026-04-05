@@ -191,7 +191,7 @@ def lerchphi_s2(z: complex, a: float, tol: float = 1e-12, maxiter: int = 200):
     return out
 
 
-def lerchphi_numpy(z, s, a):
+def lerchphi_numpy(z: complex, s: int, a: float):
     """
     Fast numerical equivalences for Lerch transcendant function in special cases.
     """
@@ -202,11 +202,11 @@ def lerchphi_numpy(z, s, a):
 
     if s == 1:
 
-        return lerchphi_s1(z, a)
+        return lerchphi_s1(z=z, a=a)
 
     if s == 2:
 
-        return lerchphi_s2(z, a)
+        return lerchphi_s2(z=z, a=a)
 
     raise NotImplementedError("Only s = {0, 1, 2} supported")
 
@@ -278,4 +278,5 @@ def compute_omega_tab(period_tab: ndarray) -> ndarray:
     Pulsation (rad.s^-1) from period (yr).
     """
 
+    return 2 * pi / (SECONDS_PER_YEAR * period_tab)
     return 2 * pi / (SECONDS_PER_YEAR * period_tab)

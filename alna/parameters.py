@@ -37,10 +37,6 @@ class StructureParameters(BaseModel):
     i_layer_icb: Optional[int] = None  # Should be >= 0.
     # Number of total layers under the Mantle-Core Boundary.
     i_layer_cmb: Optional[int] = None  # Should be >= i_layer_icb.
-    asymptotic_compressibility: bool = False
-    drho_dx_epsilon: float = (
-        1.0e-10  # Limit under which incompressibility is assumed (for Lithosphere mainly).
-    )
 
 
 DEFAULT_STRUCTURE_PARAMETERS = StructureParameters()
@@ -110,19 +106,6 @@ class IntegrationParameters(BaseModel):
 DEFAULT_SOLID_EARTH_INTEGRATION_PARAMETERS = IntegrationParameters()
 
 
-class SolidEarthOptionParameters(BaseModel):
-    """
-    Parameters for optional computations
-    """
-
-    model_id: Optional[str] = None
-    save: bool = True
-    overwrite_model: bool = False
-
-
-DEFAULT_SOLID_EARTH_OPTION_PARAMETERS = SolidEarthOptionParameters()
-
-
 class SolidEarthParameters(BaseModel):
     """
     Defines all solid Earth algorithm parameters.
@@ -131,7 +114,6 @@ class SolidEarthParameters(BaseModel):
     model: SolidEarthModelParameters = DEFAULT_SOLID_EARTH_MODEL_PARAMETERS
     n_max: Optional[int] = None
     integration_parameters: IntegrationParameters = DEFAULT_SOLID_EARTH_INTEGRATION_PARAMETERS
-    options: SolidEarthOptionParameters = DEFAULT_SOLID_EARTH_OPTION_PARAMETERS
 
 
 DEFAULT_SOLID_EARTH_PARAMETERS = SolidEarthParameters()
