@@ -123,6 +123,7 @@ def test_integrate_elastic(
     corresponding figure.
     """
 
+    initialize_test(models=None, test_path=test_path)
     degrees_list, reference_love_numbers = load_reference_love_numbers_for_validation(
         path=reference_love_numbers_path
     )

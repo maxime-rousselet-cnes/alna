@@ -5,8 +5,17 @@ Numerical constants.
 from pathlib import Path
 
 from base_models import DATA_PATH, SOLID_EARTH_MODEL_PROFILES
-from numpy import arange, array, asarray, concatenate, ndarray, ones_like, pi, zeros_like
+from numpy import abs as numpy_abs
+from numpy import arange, array, asarray, concatenate, log, ndarray, pi
+from numpy import sum as numpy_sum
+from numpy import zeros_like
+from scipy.special import zeta
 from sympy import Expr, symbols
+
+N_LERCH_SERIES: int = 20
+N_JONQUIERE_EXPANSION: int = 8
+SMALL_Z_THRESHOLD: float = 0.7
+LARGE_Z_THRESHOLD: float = 1.3
 
 ### Solid Earth model descriptions.
 SOLID_EARTH_MODEL_PROFILE_DESCRIPTIONS_ROOT_PATH = Path("../alna").joinpath(
@@ -57,164 +66,85 @@ Y_I_STATE_FOR_SURFACE: list[list[Expr]] = [
 ]
 
 
-def lerchphi_s1(z: complex, a: float, tol: float = 1e-12, maxiter: int = 200):
+def lerch_series(z: complex, s: int, a: float, n: int = N_LERCH_SERIES):
     """
-    Numerical approximation of the Lerch transcendant function for special case s = 2.
+    Computes the Lerch transcendant as a series. Converges for |z| << 1.
     """
 
     z = asarray(z, dtype=complex)
+    k = arange(n)
+
+    return numpy_sum(z[..., None] ** k / (k + a) ** s, axis=-1)
+
+
+def lerch_jonquiere(
+    z: complex,
+    s: int,
+    a: float,
+    k: int = N_JONQUIERE_EXPANSION,
+):
+    """
+    Computes the Lerch transcendant in the asymptotic region |z| ~= 1 of the complex plane for s in
+    {1, 2}.
+    """
+
+    z = asarray(z, dtype=complex)
+    logz = log(z)
+    k_tab = arange(k)
+    fact = (k_tab > 0).cumprod()  # Factorial via cumulative product.
+    fact[0] = 1
+
+    return (-1) ** (s - 1) * sum(zeta(x=s - k_tab, q=a) * logz[..., None] ** k / fact, axis=-1)
+
+
+def lerch_phi(z: complex, s: int, a: float):
+    """
+    Lerch Phi trasnscendent function, vectorized and taking advantage of s being an integer for the
+    slow convergence area of the complex plane.
+    """
+
+    z = asarray(z, dtype=complex)
+    r = numpy_abs(z)
     out = zeros_like(z, dtype=complex)
-    absz = abs(z)
-    mask_small = absz < 0.8
+    small: ndarray = r < SMALL_Z_THRESHOLD
+    large: ndarray = r > LARGE_Z_THRESHOLD
+    mid: ndarray = ~(small | large)
 
-    if any(mask_small):
+    if small.any():
 
-        zz = z[mask_small]
-        zk = ones_like(zz)
-        s = zk / a
+        out[small] = lerch_series(z=z[small], s=s, a=a)
 
-        for k in range(1, maxiter):
+    if large.any():
 
-            zk *= zz
-            term = zk / (k + a)
-            s += term
+        zl = z[large]  # Identity holds assuming no branch cut.
+        out[large] = -(1 / zl) * lerch_series(z=1 / zl, s=s, a=a)
 
-            if max(abs(term)) < tol:
+    if mid.any():
 
-                break
-
-        out[mask_small] = s
-
-    mask_large = absz > 1.2
-
-    if any(mask_large):
-
-        zz = z[mask_large]
-        w = 1.0 / zz
-        zk = ones_like(w)
-        s = zk / a
-
-        for k in range(1, maxiter):
-
-            zk *= w
-            term = zk / (k + a)
-            s += term
-
-            if max(abs(term)) < tol:
-
-                break
-
-        out[mask_large] = (zz ** (-a)) * s
-
-    mask_mid = ~(mask_small | mask_large)
-
-    if any(mask_mid):
-
-        zz = z[mask_mid]
-        zk = ones_like(zz)
-        s = zk / a
-
-        for k in range(1, 60):  # Fixed cutoff for stability.
-
-            zk *= zz
-            s += zk / (k + a)
-
-        out[mask_mid] = s
+        out[mid] = lerch_jonquiere(z=z[mid], s=s, a=a)
 
     return out
 
 
-def lerchphi_s2(z: complex, a: float, tol: float = 1e-12, maxiter: int = 200):
+def lerch_phi_numpy(z: complex, s: int, a: float):
     """
-    Numerical approximation of the Lerch transcendant function for special case s = 2.
-    """
-
-    z = asarray(z, dtype=complex)
-    out = zeros_like(z, dtype=complex)
-    absz = abs(z)
-    mask_small = absz < 0.8
-
-    if any(mask_small):
-
-        zz = z[mask_small]
-        zk = ones_like(zz)
-        s = zk / (a**2)
-
-        for k in range(1, maxiter):
-
-            zk *= zz
-            term = zk / (k + a) ** 2
-            s += term
-
-            if max(abs(term)) < tol:
-
-                break
-
-        out[mask_small] = s
-
-    mask_large = absz > 1.2
-
-    if any(mask_large):
-
-        zz = z[mask_large]
-        w = 1.0 / zz
-        zk = ones_like(w)
-        s = zk / (a**2)
-
-        for k in range(1, maxiter):
-
-            zk *= w
-            term = zk / (k + a) ** 2
-            s += term
-
-            if max(abs(term)) < tol:
-
-                break
-
-        out[mask_large] = (zz ** (-a)) * s
-
-    mask_mid = ~(mask_small | mask_large)
-
-    if any(mask_mid):
-
-        zz = z[mask_mid]
-        zk = ones_like(zz)
-        s = zk / (a**2)
-
-        for k in range(1, 80):  # Slightly longer for s = 2.
-
-            zk *= zz
-            s += zk / (k + a) ** 2
-
-        out[mask_mid] = s
-
-    return out
-
-
-def lerchphi_numpy(z: complex, s: int, a: float):
-    """
-    Fast numerical equivalences for Lerch transcendant function in special cases.
+    Fast numerical equivalences for Lerch transcendant function in special cases s = {0, 1, 2}.
     """
 
     if s == 0:
 
         return 1.0 / (1.0 - z)
 
-    if s == 1:
+    if s in [1, 2]:
 
-        return lerchphi_s1(z=z, a=a)
-
-    if s == 2:
-
-        return lerchphi_s2(z=z, a=a)
+        return lerch_phi(z=z, s=s, a=a)
 
     raise NotImplementedError("Only s = {0, 1, 2} supported")
 
 
 SYMPY_COMPILATION_MODULES_TRANSIENT_FRIENDLY = [
-    {"lerchphi": lerchphi_numpy},
+    {"lerchphi": lerch_phi_numpy},
     "numpy",
-    {"hyper": lambda *args: (_ for _ in ()).throw(NotImplementedError("Unexpected hyper"))},
 ]
 
 # Other low level parameters.
@@ -278,5 +208,4 @@ def compute_omega_tab(period_tab: ndarray) -> ndarray:
     Pulsation (rad.s^-1) from period (yr).
     """
 
-    return 2 * pi / (SECONDS_PER_YEAR * period_tab)
     return 2 * pi / (SECONDS_PER_YEAR * period_tab)

@@ -9,10 +9,9 @@ from base_models import DATA_PATH, SolidEarthModelPart, load_base_model
 from numpy import linspace, logspace
 
 from alna import SolidEarthModelDescription, SolidEarthNumericalModel, SolidEarthParameters
-from base_tests import TEST_SOLID_EARTH_NUMERICAL_MODEL_PATH, initialize_test
 
 INTEGRATION_PATH = DATA_PATH.joinpath("Love_numbers").joinpath("for_gins")
-PERIODS_TAB = logspace(start=-2, stop=4, num=100, base=10)  # (yr).
+PERIODS_TAB = logspace(start=-2, stop=4, num=40, base=10)  # (yr).
 DELTA_TAB = linspace(start=3, stop=15, num=13)
 ALPHA_TAB = linspace(start=0.15, stop=0.3, num=16)
 MODELS = {"elastic": "PREM", "attenuation": "Resovsky", "transient": "reference", "viscous": "VM7"}
@@ -22,7 +21,6 @@ PARAMETERS_PATH = Path(".")
 
 if __name__ == "__main__":
 
-    initialize_test(models=MODELS, test_path=INTEGRATION_PATH)
     profile_description = SolidEarthModelDescription(
         name=MODELS[SolidEarthModelPart.ELASTIC.value],
         solid_earth_model_part=SolidEarthModelPart.ELASTIC,
@@ -42,5 +40,5 @@ if __name__ == "__main__":
             r"\alpha^{MANTLE_0}": list(ALPHA_TAB),
             r"\Delta^{MANTLE_0}": list(DELTA_TAB),
         },
-        path=TEST_SOLID_EARTH_NUMERICAL_MODEL_PATH,
+        path=INTEGRATION_PATH,
     )

@@ -3,6 +3,7 @@ Solid Earth model description class for preprocessing.
 """
 
 from itertools import product
+from multiprocessing import Pool
 from pathlib import Path
 from typing import Optional
 
@@ -642,6 +643,8 @@ class SolidEarthNumericalModel(BaseModel):
 
         for i_omega, omega in enumerate(compute_omega_tab(period_tab=period_tab)):
 
+            print("    ", omega)
+
             # Integrates the raw y_i system (no partials) through every layer for the 3 boundary
             # conditions.
             x_tabs, y_tabs = self.integrate_y_i_system(n=n, omega=omega)
@@ -745,29 +748,60 @@ class SolidEarthNumericalModel(BaseModel):
                     state_vector_line=Y_I_STATE_VECTOR_LINE,
                 )
 
-        for invertible_parameter_tab in (
-            [[]]
-            if parameters_to_invert_dictionary is None
-            else product(*parameters_to_invert_dictionary.values())
-        ):
+        def compute_love_numbers_parallel(
+            model: SolidEarthNumericalModel,
+            invertible_parameter_tab: list[float],
+        ) -> SolidEarthNumericalModel:
+            """
+            Performs the Love number computation for all degrees and periods for a given rheology in
+            a process.
+            """
 
-            self.prepare_all_propagators(
+            model.prepare_all_propagators(
                 parameters_to_invert=parameters_to_invert,
                 invertible_parameter_tab=invertible_parameter_tab,
                 general_propagators_per_layer=general_propagators_per_layer,
                 general_partial_propagators_per_layer=general_partial_propagators_per_layer,
             )
 
+            if path.joinpath(model.name + ".json").exists():
+
+                return model
+
+            print(invertible_parameter_tab)
+
             for n, period_tab in period_tab_per_degree.items():
 
-                self.compute_love_numbers_for_degree(
+                model.compute_love_numbers_for_degree(
                     n=n,
                     period_tab=period_tab,
                     parameters_to_invert=parameters_to_invert,
                     partial_expressions_per_parameter=partial_expressions_per_parameter,
                 )
 
-            self.save(path=path)
+            model.save(path=path)
+
+            return model
+
+        if parameters_to_invert_dictionary is None:
+
+            model = compute_love_numbers_parallel(self, [])
+            self.love_numbers = model.love_numbers
+            self.love_number_partials = model.love_number_partials
+
+        else:
+
+            with Pool() as p:
+
+                p.starmap(
+                    compute_love_numbers_parallel,
+                    [
+                        (self, invertible_parameter_tab)
+                        for invertible_parameter_tab in product(
+                            *parameters_to_invert_dictionary.values()
+                        )
+                    ],
+                )
 
 
 class SolidEarthModelDescription:
