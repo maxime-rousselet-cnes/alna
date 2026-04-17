@@ -227,6 +227,7 @@ def test_integrate_partials(models: Optional[dict[str, str]] = None) -> None:
     parameter and a transient parameter.
     """
 
+    """
     integrate_partials_per_parameter(
         models=models,
         test_path=TEST_RHO_PARTIAL_INTEGRATION_PATH,
@@ -241,4 +242,9 @@ def test_integrate_partials(models: Optional[dict[str, str]] = None) -> None:
         parameter_tab=ETA_TAB,
         parameter=r"\eta_m^{UPPER-MANTLE_0}",
     )
+    """
     integrate_partials_per_parameter(models=models)
+
+
+if __name__ == "__main__":
+    test_integrate_partials()

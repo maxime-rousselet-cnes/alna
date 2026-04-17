@@ -5,17 +5,13 @@ Numerical constants.
 from pathlib import Path
 
 from base_models import DATA_PATH, SOLID_EARTH_MODEL_PROFILES
-from numpy import abs as numpy_abs
-from numpy import arange, array, asarray, concatenate, log, ndarray, pi
+from numpy import arange, array, asarray, concatenate, ndarray, pi
 from numpy import sum as numpy_sum
 from numpy import zeros_like
-from scipy.special import zeta
 from sympy import Expr, symbols
 
-N_LERCH_SERIES: int = 20
-N_JONQUIERE_EXPANSION: int = 8
-SMALL_Z_THRESHOLD: float = 0.7
-LARGE_Z_THRESHOLD: float = 1.3
+N_LERCH_SERIES: int = 10
+SMALL_Z_THRESHOLD: float = 0.5
 
 ### Solid Earth model descriptions.
 SOLID_EARTH_MODEL_PROFILE_DESCRIPTIONS_ROOT_PATH = Path("../alna").joinpath(
@@ -65,85 +61,54 @@ Y_I_STATE_FOR_SURFACE: list[list[Expr]] = [
     for i_line in range(3)
 ]
 
+import numpy as np
+from numpy.polynomial.laguerre import laggauss
 
-def lerch_series(z: complex, s: int, a: float, n: int = N_LERCH_SERIES):
-    """
-    Computes the Lerch transcendant as a series. Converges for |z| << 1.
-    """
-
-    z = asarray(z, dtype=complex)
-    k = arange(n)
-
-    return numpy_sum(z[..., None] ** k / (k + a) ** s, axis=-1)
+N = 64
+_t, _w = laggauss(N)
 
 
-def lerch_jonquiere(
-    z: complex,
-    s: int,
-    a: float,
-    k: int = N_JONQUIERE_EXPANSION,
-):
-    """
-    Computes the Lerch transcendant in the asymptotic region |z| ~= 1 of the complex plane for s in
-    {1, 2}.
-    """
-
-    z = asarray(z, dtype=complex)
-    logz = log(z)
-    k_tab = arange(k)
-    fact = (k_tab > 0).cumprod()  # Factorial via cumulative product.
-    fact[0] = 1
-
-    return (-1) ** (s - 1) * sum(zeta(x=s - k_tab, q=a) * logz[..., None] ** k / fact, axis=-1)
+def lerch_s0(z):
+    """Phi(z,0,a) exact."""
+    return 1.0 / (1.0 - z)
 
 
-def lerch_phi(z: complex, s: int, a: float):
-    """
-    Lerch Phi trasnscendent function, vectorized and taking advantage of s being an integer for the
-    slow convergence area of the complex plane.
-    """
-
-    z = asarray(z, dtype=complex)
-    r = numpy_abs(z)
-    out = zeros_like(z, dtype=complex)
-    small: ndarray = r < SMALL_Z_THRESHOLD
-    large: ndarray = r > LARGE_Z_THRESHOLD
-    mid: ndarray = ~(small | large)
-
-    if small.any():
-
-        out[small] = lerch_series(z=z[small], s=s, a=a)
-
-    if large.any():
-
-        zl = z[large]  # Identity holds assuming no branch cut.
-        out[large] = -(1 / zl) * lerch_series(z=1 / zl, s=s, a=a)
-
-    if mid.any():
-
-        out[mid] = lerch_jonquiere(z=z[mid], s=s, a=a)
-
-    return out
+def lerch_series(z, s, a, M=200):
+    """Direct series for |z|<1."""
+    zn = 1.0 + 0j
+    out = 0.0 + 0j
+    for k in range(M):
+        out += zn / ((k + a) ** s)
+        zn *= z
+    return out + zn / (1 - z) / ((M + a) ** s)
 
 
-def lerch_phi_numpy(z: complex, s: int, a: float):
-    """
-    Fast numerical equivalences for Lerch transcendant function in special cases s = {0, 1, 2}.
-    """
+def lerch_integral(z, s, a):
+    """Gauss–Laguerre integral form for general z."""
+    t, w = _t, _w
+    denom = 1.0 - z * np.exp(-t)
+    if s == 1:
+        f = np.exp(-(a - 1) * t) / denom
+    elif s == 2:
+        f = t * np.exp(-(a - 1) * t) / denom
+    else:
+        raise ValueError
+    return np.sum(w * f)
 
+
+def lerch(z: complex, s: int, a: float):
+    """Hurwitz–Lerch transcendent for s=0,1,2."""
     if s == 0:
+        return lerch_s0(z)
+    if abs(z) < 0.8:
+        return lerch_series(z, s, a)
+    return lerch_integral(z, s, a)
 
-        return 1.0 / (1.0 - z)
 
-    if s in [1, 2]:
-
-        return lerch_phi(z=z, s=s, a=a)
-
-    raise NotImplementedError("Only s = {0, 1, 2} supported")
-
+from mpmath import lerchphi as lerch_phi_mp
 
 SYMPY_COMPILATION_MODULES_TRANSIENT_FRIENDLY = [
-    {"lerchphi": lerch_phi_numpy},
+    {"lerchphi": lerch},
     "numpy",
 ]
 
@@ -208,4 +173,13 @@ def compute_omega_tab(period_tab: ndarray) -> ndarray:
     Pulsation (rad.s^-1) from period (yr).
     """
 
+    return 2 * pi / (SECONDS_PER_YEAR * period_tab)
+    return 2 * pi / (SECONDS_PER_YEAR * period_tab)
+    return 2 * pi / (SECONDS_PER_YEAR * period_tab)
+    return 2 * pi / (SECONDS_PER_YEAR * period_tab)
+    return 2 * pi / (SECONDS_PER_YEAR * period_tab)
+    return 2 * pi / (SECONDS_PER_YEAR * period_tab)
+    return 2 * pi / (SECONDS_PER_YEAR * period_tab)
+    return 2 * pi / (SECONDS_PER_YEAR * period_tab)
+    return 2 * pi / (SECONDS_PER_YEAR * period_tab)
     return 2 * pi / (SECONDS_PER_YEAR * period_tab)

@@ -3,7 +3,7 @@ Solid Earth model description class for preprocessing.
 """
 
 from dataclasses import dataclass
-from typing import Optional
+from typing import Callable, Optional
 
 from base_models import evaluate_terminal_parameters
 from numpy import inf, ndarray
@@ -36,8 +36,8 @@ class LayerModel:
     name: str = ""
     polynomials: dict[str, list[float]] = {}
     parameter_symbols: dict[str, list[Expr]] = {}
-    propagator: Optional[Expr] = None
-    partial_propagators: Optional[dict[str, Expr]] = None
+    propagator: Optional[Callable | Expr] = None
+    partial_propagators: Optional[dict[str, Callable]] = None
 
     def __init__(self, r_inf: float = 0.0, r_sup: float = 0.0, name: str = ""):
 

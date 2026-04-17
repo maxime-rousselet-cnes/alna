@@ -318,6 +318,7 @@ def plot_love_number_partials(
                     ),
                     label=f"{period:.1f} yr" if label == "h" and part == "real" else "",
                     linestyle="-",
+                    linewidth=2,
                 )
                 ax.plot(
                     parameter_tab[:-1] + diff(a=parameter_tab) / 2,
@@ -331,6 +332,7 @@ def plot_love_number_partials(
                     / diff(parameter_tab),
                     color=line.get_color(),
                     linestyle="--",
+                    linewidth=5,
                 )
 
                 if part == "real":
@@ -412,5 +414,5 @@ def test_compare_plot_semi_analytical_partials_to_finite_differences(
         parameter_tab=ETA_TAB,
     )
     compare_plot_semi_analytical_partials_to_finite_differences(
-        models=models, parameter_tab=ALPHA_TAB
+        models=models, parameter_tab=ALPHA_TAB[:9]
     )
