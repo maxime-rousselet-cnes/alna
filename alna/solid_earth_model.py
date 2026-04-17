@@ -19,7 +19,7 @@ from base_models import (
 )
 from numpy import array, empty, inf, ndarray, pi, zeros
 from pydantic import BaseModel, ConfigDict
-from sympy import Expr, Matrix, flatten, lambdify
+from sympy import Expr, Matrix, Symbol, cse, flatten, lambdify
 
 from .constants import (
     COMPLEX_PARTS,
@@ -35,64 +35,57 @@ from .constants import (
     G,
     compute_omega_tab,
 )
-from .parameters import ComponentParameters, SolidEarthParameters
+from .parameters import (
+    SolidEarthParameters,
+    compose_name_with_invertible_parameters,
+    format_name_function,
+)
 from .rheological_formulas import fluid_to_solid, solid_to_fluid
 from .sub_models import Expressions, IntegrationContext, LayerModel
 
 
-def format_name_function(name: str, component_parameters: ComponentParameters) -> str:
+def lambdify_cse(
+    args: list[Symbol],
+    expr: Expr,
+    modules: str | list[str | dict[str, Callable]] = "",
+) -> Callable:
     """
-    Eventually renames the model for clarity and separability of tests in directories.
-    """
-
-    suffix = ""
-
-    if not component_parameters.transient_component:
-
-        suffix += SOLID_EARTH_NUMERICAL_MODEL_PART_NAMES_SEPARATOR + "no_transient"
-
-    elif not component_parameters.bounded_attenuation_functions:
-
-        suffix += (
-            SOLID_EARTH_NUMERICAL_MODEL_PART_NAMES_SEPARATOR + "no_bounded_attenuation_functions"
-        )
-
-    if not component_parameters.viscous_component:
-
-        suffix += SOLID_EARTH_NUMERICAL_MODEL_PART_NAMES_SEPARATOR + "no_viscous"
-
-    if not name.endswith(suffix):
-
-        name += suffix
-
-    return name
-
-
-def compose_name_with_invertible_parameters(
-    name: str, parameters_to_invert: list[str], invertible_parameter_tab: list[float]
-) -> str:
-    """
-    Builds a model name characterized by a root and invertible parameter names and values.
+    Like sympy.lambdify, but applies common subexpression elimination (CSE) before building the
+    callable to avoid redundant computation.
     """
 
-    for parameter, value in zip(parameters_to_invert, invertible_parameter_tab):
+    if modules == "":
 
-        name = (
-            name
-            + SOLID_EARTH_NUMERICAL_MODEL_NAME_FROM_INVERTIBLE_PARAMETERS_SEPARATOR
-            + parameter
-            + f"_{value:.2e}"
-        )
+        modules = SYMPY_COMPILATION_MODULES_TRANSIENT_FRIENDLY
 
-    return name
+    (replacements, reduced_exprs) = cse([expr])
+    reduced_expr = reduced_exprs[0]
+    env_symbols: list[Symbol] = list(args)
+    compiled_steps: list[Callable] = []
 
+    for sym, rhs in replacements:
 
-def build_base_name(models: dict[str, str]) -> str:
-    """
-    A posteriori builds the name of an already merged model.
-    """
+        f = lambdify(env_symbols, rhs, modules)
+        compiled_steps.append((sym, f))
+        env_symbols.append(sym)
 
-    return SOLID_EARTH_NUMERICAL_MODEL_PART_NAMES_SEPARATOR.join(models.values())
+    final_func = lambdify(env_symbols, reduced_expr, modules)
+
+    def callable_func(*values):
+
+        if len(values) != len(args):
+
+            raise TypeError(f"Expected {len(args)} arguments, got {len(values)}")
+
+        env = list(values)
+
+        for _, f in compiled_steps:
+
+            env.append(f(*env))
+
+        return final_func(*env)
+
+    return callable_func
 
 
 class SolidEarthNumericalModel(BaseModel):
@@ -651,7 +644,7 @@ class SolidEarthNumericalModel(BaseModel):
 
             for parameter in partial_expressions_per_parameter.keys():
 
-                layer_model.partial_propagators[parameter] = lambdify(
+                layer_model.partial_propagators[parameter] = lambdify_cse(
                     args=[
                         self.expressions.expressions[r"x"],
                         Y_I_STATE_VECTOR_LINE,
@@ -664,10 +657,9 @@ class SolidEarthNumericalModel(BaseModel):
                             expression=general_partial_propagators_per_layer[i_layer][parameter]
                         ).evalf()
                     ),
-                    modules=SYMPY_COMPILATION_MODULES_TRANSIENT_FRIENDLY,
                 )
 
-            layer_model.propagator = lambdify(
+            layer_model.propagator = lambdify_cse(
                 args=[
                     self.expressions.expressions[r"x"],
                     Y_I_STATE_VECTOR_LINE[
@@ -689,7 +681,6 @@ class SolidEarthNumericalModel(BaseModel):
                         expression=general_propagators_per_layer[i_layer]
                     ).evalf()
                 ),
-                modules=SYMPY_COMPILATION_MODULES_TRANSIENT_FRIENDLY,
             )
 
     def compute_love_numbers(

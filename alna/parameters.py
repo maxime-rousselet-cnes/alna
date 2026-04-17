@@ -7,6 +7,11 @@ from typing import Optional
 from base_models import EARTH_RADIUS
 from pydantic import BaseModel
 
+from .constants import (
+    SOLID_EARTH_NUMERICAL_MODEL_NAME_FROM_INVERTIBLE_PARAMETERS_SEPARATOR,
+    SOLID_EARTH_NUMERICAL_MODEL_PART_NAMES_SEPARATOR,
+)
+
 
 class ComponentParameters(BaseModel):
     """
@@ -144,3 +149,58 @@ ELASTIC_COMPONENT_PARAMETERS = ComponentParameters(
     transient_component=False,
     bounded_attenuation_functions=False,
 )
+
+
+def format_name_function(name: str, component_parameters: ComponentParameters) -> str:
+    """
+    Eventually renames the model for clarity and separability of tests in directories.
+    """
+
+    suffix = ""
+
+    if not component_parameters.transient_component:
+
+        suffix += SOLID_EARTH_NUMERICAL_MODEL_PART_NAMES_SEPARATOR + "no_transient"
+
+    elif not component_parameters.bounded_attenuation_functions:
+
+        suffix += (
+            SOLID_EARTH_NUMERICAL_MODEL_PART_NAMES_SEPARATOR + "no_bounded_attenuation_functions"
+        )
+
+    if not component_parameters.viscous_component:
+
+        suffix += SOLID_EARTH_NUMERICAL_MODEL_PART_NAMES_SEPARATOR + "no_viscous"
+
+    if not name.endswith(suffix):
+
+        name += suffix
+
+    return name
+
+
+def compose_name_with_invertible_parameters(
+    name: str, parameters_to_invert: list[str], invertible_parameter_tab: list[float]
+) -> str:
+    """
+    Builds a model name characterized by a root and invertible parameter names and values.
+    """
+
+    for parameter, value in zip(parameters_to_invert, invertible_parameter_tab):
+
+        name = (
+            name
+            + SOLID_EARTH_NUMERICAL_MODEL_NAME_FROM_INVERTIBLE_PARAMETERS_SEPARATOR
+            + parameter
+            + f"_{value:.2e}"
+        )
+
+    return name
+
+
+def build_base_name(models: dict[str, str]) -> str:
+    """
+    A posteriori builds the name of an already merged model.
+    """
+
+    return SOLID_EARTH_NUMERICAL_MODEL_PART_NAMES_SEPARATOR.join(models.values())
