@@ -296,7 +296,7 @@ class SolidEarthNumericalModel(BaseModel):
         return partial_expressions_per_parameter, partials_matrix_per_parameter
 
     def integrate_y_i_layer(
-        self, i_layer: int, y_i: ndarray, n: int, omega: float, propagator: Callable
+        self, i_layer: int, y_i: ndarray, arguments: tuple[int, float], propagator: Callable
     ) -> tuple[ndarray, ndarray]:
         """
         Integrates the y_i system through a layer.
@@ -304,7 +304,7 @@ class SolidEarthNumericalModel(BaseModel):
 
         if self.layer_models[i_layer].high_degree_approximation(
             radius_unit=self.solid_earth_parameters.model.radius_unit,
-            n=n,
+            n=arguments[0],
             integration_parameters=self.solid_earth_parameters.integration_parameters,
         ):
 
@@ -327,15 +327,13 @@ class SolidEarthNumericalModel(BaseModel):
                 / self.solid_earth_parameters.integration_parameters.minimal_layer_radius_factor,
             ),
             y_0=y_i,
-            arguments=(n, omega / self.units[r"f"]),
+            arguments=arguments,
         )
 
         return x, y
 
     def integrate_y_i_system(
-        self,
-        n: int,
-        omega: float,
+        self, arguments: tuple[int, float]
     ) -> tuple[list[list[ndarray]], list[list[ndarray]]]:
         """
         Performs the y_i system integration.
@@ -354,13 +352,13 @@ class SolidEarthNumericalModel(BaseModel):
 
                 # The whole x-dependent solution is not needed for the core.
                 y_1 = self.integrate_y_i_layer(
-                    i_layer=i_layer, y_i=y_1, n=n, omega=omega, propagator=layer_model.propagator
+                    i_layer=i_layer, y_i=y_1, arguments=arguments, propagator=layer_model.propagator
                 )[1][-1]
                 y_2 = self.integrate_y_i_layer(
-                    i_layer=i_layer, y_i=y_2, n=n, omega=omega, propagator=layer_model.propagator
+                    i_layer=i_layer, y_i=y_2, arguments=arguments, propagator=layer_model.propagator
                 )[1][-1]
                 y_3 = self.integrate_y_i_layer(
-                    i_layer=i_layer, y_i=y_3, n=n, omega=omega, propagator=layer_model.propagator
+                    i_layer=i_layer, y_i=y_3, arguments=arguments, propagator=layer_model.propagator
                 )[1][-1]
 
             # Fluid core layers.
@@ -394,8 +392,7 @@ class SolidEarthNumericalModel(BaseModel):
                 y_fluid = self.integrate_y_i_layer(
                     i_layer=i_layer,
                     y_i=y_fluid,
-                    n=n,
-                    omega=omega,
+                    arguments=arguments,
                     propagator=layer_model.propagator,
                 )[1][-1]
 
@@ -427,8 +424,7 @@ class SolidEarthNumericalModel(BaseModel):
                     x_tabs[-1][i], y_tabs[-1][i] = self.integrate_y_i_layer(
                         i_layer=i_layer,
                         y_i=y_i,
-                        n=n,
-                        omega=omega,
+                        arguments=arguments,
                         propagator=layer_model.propagator,
                     )
 
@@ -525,8 +521,6 @@ class SolidEarthNumericalModel(BaseModel):
             self.layer_models[self.solid_earth_parameters.model.structure_parameters.i_layer_cmb :]
         ):
 
-            print(i_layer)
-
             for i_boundary_condition, (x_tab, y_tab) in enumerate(
                 zip(integration_context.x_tabs[i_layer], integration_context.y_tabs[i_layer])
             ):
@@ -608,11 +602,9 @@ class SolidEarthNumericalModel(BaseModel):
 
         for i_omega, omega in enumerate(compute_omega_tab(period_tab=period_tab)):
 
-            print("    ", omega)
-
             # Integrates the raw y_i system (no partials) through every layer for the 3 boundary
             # conditions.
-            x_tabs, y_tabs = self.integrate_y_i_system(n=n, omega=omega)
+            x_tabs, y_tabs = self.integrate_y_i_system(arguments=(n, omega / self.units[r"f"]))
             integration_context = IntegrationContext(
                 n=n, i_omega=i_omega, omega=omega, x_tabs=x_tabs, y_tabs=y_tabs
             )
@@ -683,8 +675,8 @@ class SolidEarthNumericalModel(BaseModel):
                             2
                             if (
                                 self.solid_earth_parameters.model.structure_parameters.i_layer_cmb
-                                > i_layer
-                                >= self.solid_earth_parameters.model.structure_parameters.i_layer_icb
+                                >= i_layer + 1
+                                > self.solid_earth_parameters.model.structure_parameters.i_layer_icb
                             )
                             else 6
                         )
@@ -749,8 +741,8 @@ class SolidEarthNumericalModel(BaseModel):
 
         parallel_context = ParallelContext(
             partial_expressions_per_parameter=partial_expressions_per_parameter,
-            general_propagators_per_layer=general_propagators_per_layer,
-            general_partial_propagators_per_layer=general_partial_propagators_per_layer,
+            propagators_per_layer=general_propagators_per_layer,
+            partial_propagators_per_layer=general_partial_propagators_per_layer,
             path=path,
             period_tab_per_degree=period_tab_per_degree,
         )
@@ -767,10 +759,6 @@ class SolidEarthNumericalModel(BaseModel):
 
         else:
 
-            for invertible_parameter_tab in product(*parameters_to_invert_dictionary.values()):
-
-                compute_love_numbers_parallel(self, invertible_parameter_tab, parallel_context)
-            """
             with Pool() as p:
 
                 p.starmap(
@@ -782,7 +770,6 @@ class SolidEarthNumericalModel(BaseModel):
                         )
                     ],
                 )
-            """
 
 
 @dataclass
@@ -793,8 +780,8 @@ class ParallelContext:
     """
 
     partial_expressions_per_parameter: dict[str, list[Expr]]
-    general_propagators_per_layer: list[Expr]
-    general_partial_propagators_per_layer: list[dict[str, Expr]]
+    propagators_per_layer: list[Expr]
+    partial_propagators_per_layer: list[dict[str, Expr]]
     path: Path
     period_tab_per_degree: dict[int, ndarray]
 
@@ -812,15 +799,13 @@ def compute_love_numbers_parallel(
     model.prepare_all_propagators(
         partial_expressions_per_parameter=parallel_context.partial_expressions_per_parameter,
         invertible_parameter_tab=invertible_parameter_tab,
-        general_propagators_per_layer=parallel_context.general_propagators_per_layer,
-        general_partial_propagators_per_layer=parallel_context.general_partial_propagators_per_layer,
+        general_propagators_per_layer=parallel_context.propagators_per_layer,
+        general_partial_propagators_per_layer=parallel_context.partial_propagators_per_layer,
     )
 
     if parallel_context.path.joinpath(model.name + ".json").exists():
 
         return model
-
-    print(invertible_parameter_tab)
 
     for n, period_tab in parallel_context.period_tab_per_degree.items():
 
@@ -832,7 +817,7 @@ def compute_love_numbers_parallel(
 
     model.save(path=parallel_context.path)
 
-    for i_layer in range(len(model.layer_models)):
+    for i_layer, _ in enumerate(model.layer_models):
 
         model.layer_models[i_layer].partial_propagators = None
         model.layer_models[i_layer].propagator = None

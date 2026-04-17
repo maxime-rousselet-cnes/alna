@@ -414,5 +414,5 @@ def test_compare_plot_semi_analytical_partials_to_finite_differences(
         parameter_tab=ETA_TAB,
     )
     compare_plot_semi_analytical_partials_to_finite_differences(
-        models=models, parameter_tab=ALPHA_TAB[:9]
+        models=models, parameter_tab=ALPHA_TAB
     )

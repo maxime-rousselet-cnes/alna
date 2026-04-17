@@ -5,13 +5,13 @@ Numerical constants.
 from pathlib import Path
 
 from base_models import DATA_PATH, SOLID_EARTH_MODEL_PROFILES
-from numpy import arange, array, asarray, concatenate, ndarray, pi
-from numpy import sum as numpy_sum
-from numpy import zeros_like
+from numpy import arange, array, concatenate, exp, ndarray, pi
+from numpy.polynomial.laguerre import laggauss
 from sympy import Expr, symbols
 
-N_LERCH_SERIES: int = 10
-SMALL_Z_THRESHOLD: float = 0.5
+N_GAUSS_LAGUERRE = 64
+N_LERCH_SERIES = 50
+T_GAUSS_LAGUERRE, W_GAUSS_LAGUERRE = laggauss(deg=N_GAUSS_LAGUERRE)
 
 ### Solid Earth model descriptions.
 SOLID_EARTH_MODEL_PROFILE_DESCRIPTIONS_ROOT_PATH = Path("../alna").joinpath(
@@ -61,51 +61,60 @@ Y_I_STATE_FOR_SURFACE: list[list[Expr]] = [
     for i_line in range(3)
 ]
 
-import numpy as np
-from numpy.polynomial.laguerre import laggauss
 
-N = 64
-_t, _w = laggauss(N)
+def lerch_series(z: complex, s: int, a: float, n: int = N_LERCH_SERIES):
+    """
+    Direct series for |z| < 1.
+    """
 
-
-def lerch_s0(z):
-    """Phi(z,0,a) exact."""
-    return 1.0 / (1.0 - z)
-
-
-def lerch_series(z, s, a, M=200):
-    """Direct series for |z|<1."""
     zn = 1.0 + 0j
     out = 0.0 + 0j
-    for k in range(M):
+
+    for k in range(n):
+
         out += zn / ((k + a) ** s)
         zn *= z
-    return out + zn / (1 - z) / ((M + a) ** s)
+
+    return out + zn / (1 - z) / ((n + a) ** s)
 
 
-def lerch_integral(z, s, a):
-    """Gauss–Laguerre integral form for general z."""
-    t, w = _t, _w
-    denom = 1.0 - z * np.exp(-t)
+def lerch_integral(z: complex, s: int, a: float, t=T_GAUSS_LAGUERRE, w=W_GAUSS_LAGUERRE):
+    """
+    Gauss-Laguerre integral form for general z.
+    """
+
+    denom = 1.0 - z * exp(-t)
+
     if s == 1:
-        f = np.exp(-(a - 1) * t) / denom
+
+        f = exp(-(a - 1) * t) / denom
+
     elif s == 2:
-        f = t * np.exp(-(a - 1) * t) / denom
+
+        f = t * exp(-(a - 1) * t) / denom
+
     else:
+
         raise ValueError
-    return np.sum(w * f)
+
+    return sum(w * f)
 
 
-def lerch(z: complex, s: int, a: float):
-    """Hurwitz–Lerch transcendent for s=0,1,2."""
+def lerch(z: complex, s: int, a: float, n: int = N_LERCH_SERIES):
+    """
+    Lerch transcendent for s in {0, 1, 2}.
+    """
+
     if s == 0:
-        return lerch_s0(z)
+
+        return 1.0 / (1.0 - z)
+
     if abs(z) < 0.8:
-        return lerch_series(z, s, a)
-    return lerch_integral(z, s, a)
 
+        return lerch_series(z=z, s=s, a=a, n=n)
 
-from mpmath import lerchphi as lerch_phi_mp
+    return lerch_integral(z=z, s=s, a=a)
+
 
 SYMPY_COMPILATION_MODULES_TRANSIENT_FRIENDLY = [
     {"lerchphi": lerch},
@@ -173,13 +182,4 @@ def compute_omega_tab(period_tab: ndarray) -> ndarray:
     Pulsation (rad.s^-1) from period (yr).
     """
 
-    return 2 * pi / (SECONDS_PER_YEAR * period_tab)
-    return 2 * pi / (SECONDS_PER_YEAR * period_tab)
-    return 2 * pi / (SECONDS_PER_YEAR * period_tab)
-    return 2 * pi / (SECONDS_PER_YEAR * period_tab)
-    return 2 * pi / (SECONDS_PER_YEAR * period_tab)
-    return 2 * pi / (SECONDS_PER_YEAR * period_tab)
-    return 2 * pi / (SECONDS_PER_YEAR * period_tab)
-    return 2 * pi / (SECONDS_PER_YEAR * period_tab)
-    return 2 * pi / (SECONDS_PER_YEAR * period_tab)
     return 2 * pi / (SECONDS_PER_YEAR * period_tab)
