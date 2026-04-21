@@ -510,7 +510,7 @@ def test_plot_love_numbers_for_gins(
 
         models = MODELS
 
-    love_numbers, _, _ = load_love_numbers_for_gins(
+    _, love_numbers, _, _ = load_love_numbers_for_gins(
         path=path,
         models=models,
         periods_tab=periods_tab,

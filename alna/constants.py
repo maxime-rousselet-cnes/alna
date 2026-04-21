@@ -4,7 +4,7 @@ Numerical constants.
 
 from pathlib import Path
 
-from base_models import DATA_PATH, SOLID_EARTH_MODEL_PROFILES
+from base_models import DATA_PATH, SOLID_EARTH_MODEL_PROFILES, TEST_PATH
 from numpy import arange, array, concatenate, exp, ndarray, pi
 from numpy.polynomial.laguerre import laggauss
 from sympy import Expr, symbols
@@ -21,6 +21,11 @@ SOLID_EARTH_MODEL_PROFILE_DESCRIPTIONS_PATH: dict[str, Path] = {
     model_part: SOLID_EARTH_MODEL_PROFILE_DESCRIPTIONS_ROOT_PATH.joinpath(model_part)
     for model_part in SOLID_EARTH_MODEL_PROFILES
 }
+
+TEST_SOLID_EARTH_NUMERICAL_MODEL_PATH = TEST_PATH.joinpath("solid_earth_numerical_models")
+TEST_ELASTIC_INTEGRATION_PATH = TEST_SOLID_EARTH_NUMERICAL_MODEL_PATH.joinpath(
+    "elastic_integration_test"
+)
 
 ## Solid Earth numerical models.
 SOLID_EARTH_NUMERICAL_MODELS_PATH = DATA_PATH.joinpath("solid_earth_numerical_models")

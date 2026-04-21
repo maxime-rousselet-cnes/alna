@@ -10,6 +10,7 @@ from numpy import array, linspace, logspace, ndarray, zeros
 
 from alna import (
     DEFAULT_COMPONENT_PARAMETERS,
+    TEST_ELASTIC_INTEGRATION_PATH,
     SolidEarthModelDescription,
     SolidEarthNumericalModel,
     SolidEarthParameters,
@@ -31,9 +32,7 @@ VISCOUS_PERIOD_TAB = logspace(
 )  # (yr), from sub-daily to 100 kyr.
 DEFAULT_REFERENCE_LOVE_NUMBERS_PATH = Path("../../ViscoLove/EARTH_MODELS/PREM_ELASTIC")
 NUMERICAL_TOLERANCE = 5e-5
-TEST_ELASTIC_INTEGRATION_PATH = TEST_SOLID_EARTH_NUMERICAL_MODEL_PATH.joinpath(
-    "elastic_integration_test"
-)
+
 TEST_VISCOUS_INTEGRATION_PATH = TEST_SOLID_EARTH_NUMERICAL_MODEL_PATH.joinpath(
     "viscous_integration_test"
 )

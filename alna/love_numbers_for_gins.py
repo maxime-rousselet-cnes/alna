@@ -14,8 +14,9 @@ from base_models import (
     load_base_model,
     save_base_model,
 )
-from numpy import linspace, logspace, ndarray, zeros
+from numpy import array, linspace, logspace, ndarray, zeros
 
+from .constants import TEST_ELASTIC_INTEGRATION_PATH
 from .load_solid_earth_model import load_solid_earth_numerical_model
 from .parameters import (
     ComponentParameters,
@@ -80,7 +81,7 @@ def load_love_numbers_for_gins(
     periods_tab: ndarray = PERIODS_TAB,
     alpha_tab: ndarray = ALPHA_TAB,
     delta_tab: ndarray = DELTA_TAB,
-) -> tuple[ndarray, ndarray, ndarray]:
+) -> tuple[ndarray, ndarray, ndarray, ndarray]:
     """
     Gets already computed Love numbers and their derivatives with respect to alpha and Delta.
     """
@@ -162,4 +163,22 @@ def load_love_numbers_for_gins(
                     ]
                 )
 
-    return love_numbers, love_number_alpha_partials, love_number_delta_partials
+    model = load_solid_earth_numerical_model(
+        name="PREM",
+        path=TEST_ELASTIC_INTEGRATION_PATH,
+    )
+
+    return (
+        array(
+            object=[
+                model.love_numbers["real"][degree_index][0][
+                    BoundaryCondition.POTENTIAL.value,
+                    [Direction.VERTICAL.value, Direction.POTENTIAL.value],
+                ]
+                for degree_index in [1, 2]
+            ]
+        ),
+        love_numbers,
+        love_number_alpha_partials,
+        love_number_delta_partials,
+    )

@@ -17,6 +17,7 @@ from numpy import array, ndarray
 
 from alna import (
     COMPLEX_PARTS,
+    TEST_SOLID_EARTH_NUMERICAL_MODEL_PATH,
     SolidEarthModelDescription,
     SolidEarthNumericalModel,
     SolidEarthParameters,
@@ -27,7 +28,6 @@ from alna import (
 TEST_SOLID_EARTH_MODEL_PROFILE_DESCRIPTIONS_PATH = TEST_PATH.joinpath(
     "solid_earth_model_profile_descriptions"
 )
-TEST_SOLID_EARTH_NUMERICAL_MODEL_PATH = TEST_PATH.joinpath("solid_earth_numerical_models")
 TEST_PARAMETERS_FILE_PATH = Path(".")
 TEST_PARAMETERS_SAVE_PATH = TEST_PATH.joinpath("solid_earth_parameters")
 ELASTIC_PERIOD_TAB = array(object=[1.0])  # (yr).

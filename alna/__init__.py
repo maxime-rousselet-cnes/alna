@@ -2,7 +2,12 @@
 Anelastic Love Number Algorithm
 """
 
-from .constants import COMPLEX_PARTS, SOLID_EARTH_NUMERICAL_MODEL_PART_NAMES_SEPARATOR
+from .constants import (
+    COMPLEX_PARTS,
+    SOLID_EARTH_NUMERICAL_MODEL_PART_NAMES_SEPARATOR,
+    TEST_ELASTIC_INTEGRATION_PATH,
+    TEST_SOLID_EARTH_NUMERICAL_MODEL_PATH,
+)
 from .load_solid_earth_model import load_solid_earth_numerical_model
 from .love_numbers_for_gins import (
     ALPHA_TAB,
@@ -34,6 +39,8 @@ to_import = [
     load_love_numbers_for_gins,
     COMPLEX_PARTS,
     SOLID_EARTH_NUMERICAL_MODEL_PART_NAMES_SEPARATOR,
+    TEST_ELASTIC_INTEGRATION_PATH,
+    TEST_SOLID_EARTH_NUMERICAL_MODEL_PATH,
     DEFAULT_COMPONENT_PARAMETERS,
     ComponentParameters,
     SolidEarthParameters,
