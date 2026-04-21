@@ -7,24 +7,31 @@ from typing import Iterable, Optional
 
 from base_models import (
     DEFAULT_MODELS,
+    LOVE_NUMBERS_PATH,
     TEST_FIGURES_PATH,
     BoundaryCondition,
     Direction,
     SolidEarthModelPart,
+    lagrange_order4,
 )
 from matplotlib.axes import Axes
 from matplotlib.colors import SymLogNorm
 from matplotlib.figure import Figure
 from matplotlib.pyplot import get_cmap, subplots, suptitle, tight_layout
-from numpy import array, diff, log10, meshgrid, ndarray, zeros
+from numpy import array, atan2, diff, log, log10, meshgrid, ndarray, zeros
 
+from alna import ALPHA_TAB as ALPHA_TAB_FOR_GINS
+from alna import COMPLEX_PARTS
+from alna import DELTA_TAB as DELTA_TAB_FOR_GINS
 from alna import (
-    COMPLEX_PARTS,
+    MODELS,
+    PERIODS_TAB,
     SOLID_EARTH_NUMERICAL_MODEL_PART_NAMES_SEPARATOR,
     ComponentParameters,
     build_base_name,
     compose_name_with_invertible_parameters,
     format_name_function,
+    load_love_numbers_for_gins,
     load_solid_earth_numerical_model,
 )
 from integration_tests import (
@@ -370,7 +377,6 @@ def compare_plot_semi_analytical_partials_to_finite_differences(
 
         models = DEFAULT_MODELS
 
-    path = TEST_FIGURES_PATH
     love_numbers, love_number_partials = load_love_numbers_for_partials_plot(
         models=models,
         test_path=test_path,
@@ -388,7 +394,7 @@ def compare_plot_semi_analytical_partials_to_finite_differences(
         parameter_tab=parameter_tab,
     )
     tight_layout()
-    save_figure(figure=figure, figure_title=parameter + " partials", path=path)
+    save_figure(figure=figure, figure_title=parameter + " partials", path=TEST_FIGURES_PATH)
 
 
 def test_compare_plot_semi_analytical_partials_to_finite_differences(
@@ -416,3 +422,118 @@ def test_compare_plot_semi_analytical_partials_to_finite_differences(
     compare_plot_semi_analytical_partials_to_finite_differences(
         models=models, parameter_tab=ALPHA_TAB
     )
+
+
+def plot_love_numbers_for_gins(
+    love_numbers: ndarray,
+    alpha_tab: ndarray,
+    delta_tab: ndarray,
+    log_periods: ndarray,
+    period: float,
+) -> Figure:
+    """
+    Prepares a Modulus/Phase plot for either h or k.
+    """
+
+    love_numbers_to_plot = zeros(shape=(len(alpha_tab), len(delta_tab)), dtype=complex)
+    axes: Iterable[Iterable[Axes]]
+    figure, axes = subplots(2, 2, figsize=(8, 6), sharex=True, sharey=True)
+
+    for ax_line, direction in zip(axes, [Direction.VERTICAL, Direction.POTENTIAL]):
+
+        # For degree 2, to interpolate on last component.
+        for i_alpha, love_numbers_tab in enumerate(
+            love_numbers[:, :, 0, :, min(direction.value, 1)]
+        ):
+
+            love_numbers_line: ndarray
+
+            for dummy_variable, love_numbers_line in enumerate(love_numbers_tab):
+
+                love_numbers_to_plot[i_alpha, dummy_variable] = (
+                    lagrange_order4(
+                        x=log_periods,
+                        y=array(object=love_numbers_line.real, dtype=float),
+                        new_x=array(object=[log(period)], dtype=float),
+                    )[0]
+                    + 1j
+                    * lagrange_order4(
+                        x=log_periods,
+                        y=array(object=love_numbers_line.imag, dtype=float),
+                        new_x=array(object=[log(period)], dtype=float),
+                    )[0]
+                )
+
+        for ax, dummy_variable in zip(ax_line, ["Modulus", "Phase"]):
+
+            ax.imshow(
+                (
+                    (love_numbers_to_plot.real**2 + love_numbers_to_plot.imag**2) ** 0.5
+                    if dummy_variable == "Modulus"
+                    else atan2(love_numbers_to_plot.imag, love_numbers_to_plot.real)
+                ),
+                extent=[alpha_tab.min(), alpha_tab.max(), delta_tab.min(), delta_tab.max()],
+                origin="lower",
+                aspect="auto",
+            )
+            figure.colorbar(ax.images[0], ax=ax, orientation="vertical")
+
+            if dummy_variable == "Modulus":
+
+                ax.set_ylabel(r"$\Delta$")
+                ax.tick_params(labelbottom=False)
+
+            if direction == Direction.POTENTIAL:
+
+                ax.tick_params(labelbottom=True)
+                ax.set_xlabel(r"$\alpha$")
+
+            else:
+
+                ax.set_title(dummy_variable)
+
+    return figure
+
+
+def test_plot_love_numbers_for_gins(
+    path: Path = LOVE_NUMBERS_PATH.joinpath("for_gins"),
+    models: Optional[dict[str, str]] = None,
+    periods_tab: ndarray = PERIODS_TAB,
+    alpha_tab: ndarray = ALPHA_TAB_FOR_GINS,
+    delta_tab: ndarray = DELTA_TAB_FOR_GINS,
+) -> None:
+    """
+    Shows the GINS-ready Love numbers in 2D (alpha, delta) for real and imaginary parts.
+    """
+
+    if models is None:
+
+        models = MODELS
+
+    love_numbers, _, _ = load_love_numbers_for_gins(
+        path=path,
+        models=models,
+        periods_tab=periods_tab,
+        alpha_tab=alpha_tab,
+        delta_tab=delta_tab,
+    )  # (alpha, delta, 2, periods, 2)
+    log_periods = array(object=log(periods_tab), dtype=float)
+
+    for period in list(PARTIAL_PERIOD_TAB) + [100.0]:
+
+        figure = plot_love_numbers_for_gins(
+            love_numbers=love_numbers,
+            alpha_tab=alpha_tab,
+            delta_tab=delta_tab,
+            log_periods=log_periods,
+            period=period,
+        )
+        save_figure(
+            figure=figure,
+            figure_title="Love_numbers_for_gins_" + str(period) + "yr",
+            path=TEST_FIGURES_PATH,
+        )
+
+
+if __name__ == "__main__":
+    test_plot_love_numbers_for_gins()

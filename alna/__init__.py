@@ -10,6 +10,7 @@ from .love_numbers_for_gins import (
     MODELS,
     PERIODS_TAB,
     compute_love_numbers_for_gins,
+    load_love_numbers_for_gins,
 )
 from .parameters import (
     DEFAULT_COMPONENT_PARAMETERS,
@@ -30,6 +31,7 @@ to_import = [
     MODELS,
     PERIODS_TAB,
     compute_love_numbers_for_gins,
+    load_love_numbers_for_gins,
     COMPLEX_PARTS,
     SOLID_EARTH_NUMERICAL_MODEL_PART_NAMES_SEPARATOR,
     DEFAULT_COMPONENT_PARAMETERS,
