@@ -76,7 +76,7 @@ def compute_love_numbers_for_gins(
 
 
 def load_love_numbers_for_gins(
-    path: Path = LOVE_NUMBERS_PATH.joinpath("for_gins"),
+    path: Path = INTEGRATION_PATH,
     models: Optional[dict[str, str]] = None,
     periods_tab: ndarray = PERIODS_TAB,
     alpha_tab: ndarray = ALPHA_TAB,
