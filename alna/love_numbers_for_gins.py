@@ -175,7 +175,7 @@ def load_love_numbers_for_gins(
                     BoundaryCondition.POTENTIAL.value,
                     [Direction.VERTICAL.value, Direction.POTENTIAL.value],
                 ]
-                for degree_index in [1, 2]
+                for degree_index in [2, 3]
             ]
         ),
         love_numbers,
