@@ -4,7 +4,8 @@ Numerical constants.
 
 from pathlib import Path
 
-from base_models import DATA_PATH, SOLID_EARTH_MODEL_PROFILES, TEST_PATH
+from base_models import DATA_PATH, SOLID_EARTH_MODEL_PROFILES, TEST_FIGURES_PATH, TEST_PATH
+from matplotlib.figure import Figure
 from numpy import arange, array, concatenate, exp, ndarray, pi
 from numpy.polynomial.laguerre import laggauss
 from sympy import Expr, symbols
@@ -188,3 +189,16 @@ def compute_omega_tab(period_tab: ndarray) -> ndarray:
     """
 
     return 2 * pi / (SECONDS_PER_YEAR * period_tab)
+
+
+def save_figure(figure: Figure, figure_title: str, path: Path = TEST_FIGURES_PATH) -> None:
+    """
+    Saves figure to specified path.
+    """
+
+    path.mkdir(exist_ok=True, parents=True)
+
+    for file_format in ["svg", "png"]:
+
+        figure.savefig(fname=path.joinpath(figure_title + "." + file_format), format=file_format)
+        figure.savefig(fname=path.joinpath(figure_title + "." + file_format), format=file_format)

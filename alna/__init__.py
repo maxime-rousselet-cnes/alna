@@ -7,6 +7,7 @@ from .constants import (
     SOLID_EARTH_NUMERICAL_MODEL_PART_NAMES_SEPARATOR,
     TEST_ELASTIC_INTEGRATION_PATH,
     TEST_SOLID_EARTH_NUMERICAL_MODEL_PATH,
+    save_figure,
 )
 from .load_solid_earth_model import load_solid_earth_numerical_model
 from .love_numbers_for_gins import (
@@ -43,6 +44,7 @@ to_import = [
     SOLID_EARTH_NUMERICAL_MODEL_PART_NAMES_SEPARATOR,
     TEST_ELASTIC_INTEGRATION_PATH,
     TEST_SOLID_EARTH_NUMERICAL_MODEL_PATH,
+    save_figure,
     DEFAULT_COMPONENT_PARAMETERS,
     ComponentParameters,
     SolidEarthParameters,

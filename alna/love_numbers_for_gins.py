@@ -149,7 +149,7 @@ def load_love_numbers_for_gins(
                     ]
                 )
 
-                love_number_alpha_partials[i_alpha, i_delta, degree_index] = (
+                love_number_delta_partials[i_alpha, i_delta, degree_index] = (
                     model.love_number_partials["real"][r"\Delta^{MANTLE_0}"][degree_index + 2][
                         :,
                         BoundaryCondition.POTENTIAL.value,

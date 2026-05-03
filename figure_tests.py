@@ -18,7 +18,8 @@ from matplotlib.axes import Axes
 from matplotlib.colors import SymLogNorm
 from matplotlib.figure import Figure
 from matplotlib.pyplot import get_cmap, subplots, suptitle, tight_layout
-from numpy import array, atan2, diff, log, log10, meshgrid, ndarray, zeros
+from matplotlib.ticker import StrMethodFormatter
+from numpy import array, atan2, diff, log, log10, meshgrid, ndarray, pi, zeros
 
 from alna import ALPHA_TAB as ALPHA_TAB_FOR_GINS
 from alna import COMPLEX_PARTS
@@ -33,6 +34,7 @@ from alna import (
     format_name_function,
     load_love_numbers_for_gins,
     load_solid_earth_numerical_model,
+    save_figure,
 )
 from integration_tests import (
     ALPHA_TAB,
@@ -51,18 +53,6 @@ from integration_tests import (
 )
 
 DEFAULT_REFERENCE_LOVE_NUMBERS_PATH = Path("../../ViscoLove/EARTH_MODELS/PREM_ELASTIC")
-
-
-def save_figure(figure: Figure, figure_title: str, path: Path = TEST_FIGURES_PATH) -> None:
-    """
-    Saves figure to specified path.
-    """
-
-    path.mkdir(exist_ok=True, parents=True)
-
-    for file_format in ["svg", "png"]:
-
-        figure.savefig(fname=path.joinpath(figure_title + "." + file_format), format=file_format)
 
 
 def test_compare_plot_to_elastic_reference(
@@ -436,61 +426,64 @@ def plot_love_numbers_for_gins(
     """
 
     love_numbers_to_plot = zeros(shape=(len(alpha_tab), len(delta_tab)), dtype=complex)
-    axes: Iterable[Iterable[Axes]]
-    figure, axes = subplots(2, 2, figsize=(8, 6), sharex=True, sharey=True)
+    axes: Iterable[Axes]
+    figure, axes = subplots(1, 2, figsize=(10, 4), sharex=True, sharey=True)
 
-    for ax_line, direction in zip(axes, [Direction.VERTICAL, Direction.POTENTIAL]):
+    # For degree 2, to interpolate on last component.
+    for i_alpha, love_numbers_tab in enumerate(love_numbers[:, :, 0, :, 1]):
 
-        # For degree 2, to interpolate on last component.
-        for i_alpha, love_numbers_tab in enumerate(
-            love_numbers[:, :, 0, :, min(direction.value, 1)]
-        ):
+        love_numbers_line: ndarray
 
-            love_numbers_line: ndarray
+        for dummy_variable, love_numbers_line in enumerate(love_numbers_tab):
 
-            for dummy_variable, love_numbers_line in enumerate(love_numbers_tab):
-
-                love_numbers_to_plot[i_alpha, dummy_variable] = (
-                    lagrange_order4(
-                        x=log_periods,
-                        y=array(object=love_numbers_line.real, dtype=float),
-                        new_x=array(object=[log(period)], dtype=float),
-                    )[0]
-                    + 1j
-                    * lagrange_order4(
-                        x=log_periods,
-                        y=array(object=love_numbers_line.imag, dtype=float),
-                        new_x=array(object=[log(period)], dtype=float),
-                    )[0]
-                )
-
-        for ax, dummy_variable in zip(ax_line, ["Modulus", "Phase"]):
-
-            ax.imshow(
-                (
-                    (love_numbers_to_plot.real**2 + love_numbers_to_plot.imag**2) ** 0.5
-                    if dummy_variable == "Modulus"
-                    else atan2(love_numbers_to_plot.imag, love_numbers_to_plot.real)
-                ),
-                extent=[alpha_tab.min(), alpha_tab.max(), delta_tab.min(), delta_tab.max()],
-                origin="lower",
-                aspect="auto",
+            love_numbers_to_plot[i_alpha, dummy_variable] = (
+                lagrange_order4(
+                    x=log_periods,
+                    y=array(object=love_numbers_line.real, dtype=float),
+                    new_x=array(object=[log(period)], dtype=float),
+                )[0]
+                + 1j
+                * lagrange_order4(
+                    x=log_periods,
+                    y=array(object=love_numbers_line.imag, dtype=float),
+                    new_x=array(object=[log(period)], dtype=float),
+                )[0]
             )
-            figure.colorbar(ax.images[0], ax=ax, orientation="vertical")
 
-            if dummy_variable == "Modulus":
+    for ax, dummy_variable in zip(axes, ["Modulus", "Phase"]):
 
-                ax.set_ylabel(r"$\Delta$")
-                ax.tick_params(labelbottom=False)
+        ax.xaxis.set_major_formatter(StrMethodFormatter("{x:g}"))
+        ax.yaxis.set_major_formatter(StrMethodFormatter("{x:g}"))
+        ax.imshow(
+            (
+                (love_numbers_to_plot.real**2 + love_numbers_to_plot.imag**2) ** 0.5
+                if dummy_variable == "Modulus"
+                else atan2(love_numbers_to_plot.imag, love_numbers_to_plot.real)
+                * period
+                / (2 * pi)
+                * (1 if period > 10 else 365)
+            ),
+            extent=[alpha_tab.min(), alpha_tab.max(), delta_tab.min(), delta_tab.max()],
+            origin="lower",
+            aspect="auto",
+        )
+        cbar = figure.colorbar(ax.images[0], ax=ax, orientation="vertical")
+        cbar.ax.yaxis.set_major_formatter(StrMethodFormatter("{x:g}"))
+        cbar.set_label(
+            (
+                ("        years" if period > 10 else "days")
+                if dummy_variable == "Phase"
+                else r"          $|\frac{k_2(\omega)}{k_2^{el}}|$"
+            ),
+            fontsize=10 if dummy_variable == "Phase" else 12,
+            rotation=0,
+        )
 
-            if direction == Direction.POTENTIAL:
+        ax.set_ylabel(r"$\Delta$")
+        ax.set_xlabel(r"$\alpha$")
+        ax.set_title(dummy_variable)
 
-                ax.tick_params(labelbottom=True)
-                ax.set_xlabel(r"$\alpha$")
-
-            else:
-
-                ax.set_title(dummy_variable)
+    tight_layout()
 
     return figure
 
@@ -510,7 +503,7 @@ def test_plot_love_numbers_for_gins(
 
         models = MODELS
 
-    _, love_numbers, _, _ = load_love_numbers_for_gins(
+    elastic_love_numbers, love_numbers, _, _ = load_love_numbers_for_gins(
         path=path,
         models=models,
         periods_tab=periods_tab,
@@ -519,10 +512,10 @@ def test_plot_love_numbers_for_gins(
     )  # (alpha, delta, 2, periods, 2)
     log_periods = array(object=log(periods_tab), dtype=float)
 
-    for period in list(PARTIAL_PERIOD_TAB) + [100.0]:
+    for period in list(PARTIAL_PERIOD_TAB) + [433 / 365, 100.0]:
 
         figure = plot_love_numbers_for_gins(
-            love_numbers=love_numbers,
+            love_numbers=love_numbers / elastic_love_numbers[None, None:, None, :],
             alpha_tab=alpha_tab,
             delta_tab=delta_tab,
             log_periods=log_periods,
