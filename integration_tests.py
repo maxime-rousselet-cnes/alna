@@ -39,12 +39,16 @@ TEST_VISCOUS_INTEGRATION_PATH = TEST_SOLID_EARTH_NUMERICAL_MODEL_PATH.joinpath(
 TEST_ALPHA_PARTIAL_INTEGRATION_PATH = TEST_SOLID_EARTH_NUMERICAL_MODEL_PATH.joinpath(
     "alpha_partials"
 )
+TEST_DELTA_PARTIAL_INTEGRATION_PATH = TEST_SOLID_EARTH_NUMERICAL_MODEL_PATH.joinpath(
+    "delta_partials"
+)
 TEST_RHO_PARTIAL_INTEGRATION_PATH = TEST_SOLID_EARTH_NUMERICAL_MODEL_PATH.joinpath("rho_partials")
 TEST_ETA_PARTIAL_INTEGRATION_PATH = TEST_SOLID_EARTH_NUMERICAL_MODEL_PATH.joinpath("eta_partials")
 ETA_PERIOD_TAB = array(object=[1, 10, 100])
 ETA_TAB = linspace(start=1e18, stop=1e19, num=11)
 ALPHA_TAB = linspace(start=0.2, stop=0.3, num=101)
 RHO_TAB = linspace(start=7000, stop=9000, num=101)
+DELTA_TAB = linspace(start=4.0, stop=15.0, num=101)
 
 
 def load_reference_love_number_file_for_validation(file_path: Path) -> tuple[list[int], ndarray]:
@@ -210,7 +214,7 @@ def integrate_partials_per_parameter(
     solid_earth_numerical_model = load_solid_earth_numerical_model(
         name=build_base_name(models=models),
         path=test_path.parent,
-        force_transient="alpha" in parameter or "delta" in parameter,
+        force_transient="alpha" in parameter or "Delta" in parameter,
         force_viscous="eta_m" in parameter,
     )
     solid_earth_numerical_model.compute_love_numbers(
@@ -245,4 +249,9 @@ def test_integrate_partials(models: Optional[dict[str, str]] = None) -> None:
 
 if __name__ == "__main__":
 
-    test_integrate_partials()
+    integrate_partials_per_parameter()
+    integrate_partials_per_parameter(
+        test_path=TEST_DELTA_PARTIAL_INTEGRATION_PATH,
+        parameter_tab=DELTA_TAB,
+        parameter=r"\Delta^{MANTLE_0}",
+    )

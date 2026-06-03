@@ -38,12 +38,14 @@ from alna import (
 )
 from integration_tests import (
     ALPHA_TAB,
+    DELTA_TAB,
     ELASTIC_PERIOD_TAB,
     ETA_PERIOD_TAB,
     ETA_TAB,
     PARTIAL_PERIOD_TAB,
     RHO_TAB,
     TEST_ALPHA_PARTIAL_INTEGRATION_PATH,
+    TEST_DELTA_PARTIAL_INTEGRATION_PATH,
     TEST_ELASTIC_INTEGRATION_PATH,
     TEST_ETA_PARTIAL_INTEGRATION_PATH,
     TEST_RHO_PARTIAL_INTEGRATION_PATH,
@@ -260,7 +262,7 @@ def load_love_numbers_for_partials_plot(
                     name=build_base_name(models=models),
                     component_parameters=ComponentParameters(
                         viscous_component="eta" in parameter,
-                        transient_component="alpha" in parameter or "delta" in parameter,
+                        transient_component="alpha" in parameter or "Delta" in parameter,
                         bounded_attenuation_functions=True,
                     ),
                 ),
@@ -412,6 +414,12 @@ def test_compare_plot_semi_analytical_partials_to_finite_differences(
     compare_plot_semi_analytical_partials_to_finite_differences(
         models=models, parameter_tab=ALPHA_TAB
     )
+    compare_plot_semi_analytical_partials_to_finite_differences(
+        parameter=r"\Delta^{MANTLE_0}",
+        test_path=TEST_DELTA_PARTIAL_INTEGRATION_PATH,
+        models=models,
+        parameter_tab=DELTA_TAB,
+    )
 
 
 def plot_love_numbers_for_gins(
@@ -529,4 +537,5 @@ def test_plot_love_numbers_for_gins(
 
 
 if __name__ == "__main__":
-    test_plot_love_numbers_for_gins()
+
+    test_compare_plot_semi_analytical_partials_to_finite_differences()
