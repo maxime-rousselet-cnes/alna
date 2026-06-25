@@ -177,8 +177,7 @@ def test_integrate_viscous(
     test_path: Path = TEST_VISCOUS_INTEGRATION_PATH,
 ) -> None:
     """
-    Integrates a model in every different anelastic setting (2x2x2 = 8 options) to check robustness
-    for a single (degree, period) pair.
+    Integrates a model to benchmark in the Maxwell setting.
     """
 
     models = initialize_test(models=models, test_path=test_path)

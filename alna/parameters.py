@@ -119,6 +119,7 @@ class SolidEarthParameters(BaseModel):
     model: SolidEarthModelParameters = DEFAULT_SOLID_EARTH_MODEL_PARAMETERS
     n_max: Optional[int] = None
     integration_parameters: IntegrationParameters = DEFAULT_SOLID_EARTH_INTEGRATION_PARAMETERS
+    compute_partials: bool = True
 
 
 DEFAULT_SOLID_EARTH_PARAMETERS = SolidEarthParameters()

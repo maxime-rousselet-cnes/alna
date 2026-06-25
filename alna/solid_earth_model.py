@@ -58,7 +58,7 @@ def lambdify_cse(
 
         modules = SYMPY_COMPILATION_MODULES_TRANSIENT_FRIENDLY
 
-    (replacements, reduced_exprs) = cse([expr])
+    replacements, reduced_exprs = cse([expr])
     reduced_expr = reduced_exprs[0]
     env_symbols: list[Symbol] = list(args)
     compiled_steps: list[Callable] = []
@@ -261,12 +261,14 @@ class SolidEarthNumericalModel(BaseModel):
         # Defines formally the partial derivative symbols.
         for parameter in parameters_to_invert:
 
-            partial_expressions, partials_matrix_for_parameter = partial_symbols(
-                parameter=self.expressions.parameter_expressions[parameter],
-                state_vector_line=Y_I_STATE_VECTOR_LINE,
-            )
-            partial_expressions_per_parameter[parameter] = partial_expressions
-            partials_matrix_per_parameter[parameter] = partials_matrix_for_parameter
+            if self.solid_earth_parameters.compute_partials:
+
+                partial_expressions, partials_matrix_for_parameter = partial_symbols(
+                    parameter=self.expressions.parameter_expressions[parameter],
+                    state_vector_line=Y_I_STATE_VECTOR_LINE,
+                )
+                partial_expressions_per_parameter[parameter] = partial_expressions
+                partials_matrix_per_parameter[parameter] = partials_matrix_for_parameter
 
         self.love_numbers = {
             part: {
@@ -554,38 +556,40 @@ class SolidEarthNumericalModel(BaseModel):
 
         for parameter in parameters_to_invert:
 
-            y_i_all_partial_symbols[parameter] = []
-            self.expressions.expressions[r"\frac{\partial L_n}{\partial " + parameter + "}"] = (
-                self.expressions.expressions[r"L_n"].diff(
-                    self.expressions.parameter_expressions[parameter]
+            if self.solid_earth_parameters.compute_partials:
+
+                y_i_all_partial_symbols[parameter] = []
+                self.expressions.expressions[r"\frac{\partial L_n}{\partial " + parameter + "}"] = (
+                    self.expressions.expressions[r"L_n"].diff(
+                        self.expressions.parameter_expressions[parameter]
+                    )
                 )
-            )
 
-            for y_i_state_line_for_surface in Y_I_STATE_FOR_SURFACE:
+                for y_i_state_line_for_surface in Y_I_STATE_FOR_SURFACE:
 
-                y_i_all_partial_symbols[parameter] += [
-                    partial_symbols(
-                        parameter=self.expressions.parameter_expressions[parameter],
-                        state_vector_line=y_i_state_line_for_surface,
-                    )[0]
-                ]
+                    y_i_all_partial_symbols[parameter] += [
+                        partial_symbols(
+                            parameter=self.expressions.parameter_expressions[parameter],
+                            state_vector_line=y_i_state_line_for_surface,
+                        )[0]
+                    ]
 
-                for y_i, y_i_partial in zip(
-                    y_i_state_line_for_surface, y_i_all_partial_symbols[parameter][-1]
-                ):
+                    for y_i, y_i_partial in zip(
+                        y_i_state_line_for_surface, y_i_all_partial_symbols[parameter][-1]
+                    ):
 
-                    self.expressions.expressions[
-                        r"\frac{\partial L_n}{\partial " + parameter + "}"
-                    ] += y_i_partial * self.expressions.expressions[r"L_n"].diff(y_i)
+                        self.expressions.expressions[
+                            r"\frac{\partial L_n}{\partial " + parameter + "}"
+                        ] += y_i_partial * self.expressions.expressions[r"L_n"].diff(y_i)
 
-            self.expressions.expressions[r"\frac{\partial L_n}{\partial " + parameter + "}"] = (
-                self.expressions.evaluate(
-                    expression=self.expressions.expressions[
-                        r"\frac{\partial L_n}{\partial " + parameter + "}"
-                    ].doit(),
-                    x=1,
+                self.expressions.expressions[r"\frac{\partial L_n}{\partial " + parameter + "}"] = (
+                    self.expressions.evaluate(
+                        expression=self.expressions.expressions[
+                            r"\frac{\partial L_n}{\partial " + parameter + "}"
+                        ].doit(),
+                        x=1,
+                    )
                 )
-            )
 
         # Apply numerical values so that only the (3, 6) y_i remain.
         self.expressions.expressions[r"L_n"] = self.expressions.evaluate(
@@ -605,11 +609,13 @@ class SolidEarthNumericalModel(BaseModel):
 
             for parameter in parameters_to_invert:
 
-                self.integrate_partials(
-                    integration_context=integration_context,
-                    parameter=parameter,
-                    y_i_all_partial_symbols=y_i_all_partial_symbols,
-                )
+                if self.solid_earth_parameters.compute_partials:
+
+                    self.integrate_partials(
+                        integration_context=integration_context,
+                        parameter=parameter,
+                        y_i_all_partial_symbols=y_i_all_partial_symbols,
+                    )
 
     def prepare_all_propagators(
         self,
@@ -721,14 +727,21 @@ class SolidEarthNumericalModel(BaseModel):
             general_propagators_per_layer += [layer_model.propagator]
             general_partial_propagators_per_layer += [{}]
 
+            if self.solid_earth_parameters.compute_partials:
+                continue
+
             for parameter in parameters_to_invert:
 
-                general_partial_propagators_per_layer[-1][parameter] = vector_variation_equation(
-                    dynamic=layer_model.propagator,
-                    parameter=self.expressions.parameter_expressions[parameter],
-                    partials=partials_matrix_per_parameter[parameter],
-                    state_vector_line=Y_I_STATE_VECTOR_LINE,
-                )
+                if self.solid_earth_parameters.compute_partials:
+
+                    general_partial_propagators_per_layer[-1][parameter] = (
+                        vector_variation_equation(
+                            dynamic=layer_model.propagator,
+                            parameter=self.expressions.parameter_expressions[parameter],
+                            partials=partials_matrix_per_parameter[parameter],
+                            state_vector_line=Y_I_STATE_VECTOR_LINE,
+                        )
+                    )
 
         parallel_context = ParallelContext(
             partial_expressions_per_parameter=partial_expressions_per_parameter,

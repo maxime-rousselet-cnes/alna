@@ -20,5 +20,6 @@
         "minimal_layer_radius_factor":1,
         "atol": 1.0e-14,
         "rtol": 1.0e-10
-    }
+    },
+    "compute_partials": true
 }

@@ -464,7 +464,7 @@ def surface_solution(
     g_0_surface: Expr,
 ) -> MutableDenseMatrix:
     """
-    Returns load Love numbers from the y_i system solution at Earth surface.
+    Returns Love numbers from the y_i system solution at Earth surface.
     To call for the very last layer.
     """
 
