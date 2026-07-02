@@ -727,21 +727,18 @@ class SolidEarthNumericalModel(BaseModel):
             general_propagators_per_layer += [layer_model.propagator]
             general_partial_propagators_per_layer += [{}]
 
-            if self.solid_earth_parameters.compute_partials:
+            if not self.solid_earth_parameters.compute_partials:
+
                 continue
 
             for parameter in parameters_to_invert:
 
-                if self.solid_earth_parameters.compute_partials:
-
-                    general_partial_propagators_per_layer[-1][parameter] = (
-                        vector_variation_equation(
-                            dynamic=layer_model.propagator,
-                            parameter=self.expressions.parameter_expressions[parameter],
-                            partials=partials_matrix_per_parameter[parameter],
-                            state_vector_line=Y_I_STATE_VECTOR_LINE,
-                        )
-                    )
+                general_partial_propagators_per_layer[-1][parameter] = vector_variation_equation(
+                    dynamic=layer_model.propagator,
+                    parameter=self.expressions.parameter_expressions[parameter],
+                    partials=partials_matrix_per_parameter[parameter],
+                    state_vector_line=Y_I_STATE_VECTOR_LINE,
+                )
 
         parallel_context = ParallelContext(
             partial_expressions_per_parameter=partial_expressions_per_parameter,

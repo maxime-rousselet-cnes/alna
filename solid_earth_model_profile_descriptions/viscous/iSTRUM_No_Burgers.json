@@ -2,14 +2,12 @@
     "layer_names": [
         "LOWER-MANTLE",
         "UPPER-MANTLE",
-        "ASTHENOSPHERE",
         "LITHOSPHERE",
         "CRUST"
     ],
     "r_limits": [
         3480000.0,
         5701000.0,
-        6046600.0,
         6246600.0,
         6346600.0,
         6371000.0
@@ -22,9 +20,6 @@
             ],
             [
                 5e20
-            ],
-            [
-                1e19
             ],
             [
                 "inf"

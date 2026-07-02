@@ -21,12 +21,10 @@ from matplotlib.pyplot import get_cmap, subplots, suptitle, tight_layout
 from matplotlib.ticker import StrMethodFormatter
 from numpy import array, atan2, diff, log, log10, meshgrid, ndarray, pi, zeros
 
-from alna import ALPHA_TAB as ALPHA_TAB_FOR_GINS
-from alna import COMPLEX_PARTS
-from alna import DELTA_TAB as DELTA_TAB_FOR_GINS
 from alna import (
+    COMPLEX_PARTS,
+    LOVE_NUMBERS_FOR_GINS_TABS,
     MODELS,
-    PERIODS_TAB,
     SOLID_EARTH_NUMERICAL_MODEL_PART_NAMES_SEPARATOR,
     ComponentParameters,
     build_base_name,
@@ -422,112 +420,175 @@ def test_compare_plot_semi_analytical_partials_to_finite_differences(
     )
 
 
-def plot_love_numbers_for_gins(
-    love_numbers: ndarray,
-    alpha_tab: ndarray,
-    delta_tab: ndarray,
-    log_periods: ndarray,
+def plot_interpolated_love_numbers_for_gins(
+    love_numbers_to_plot: ndarray,
+    tau_values_to_plot: ndarray,
+    love_numbers_for_gins_tabs: dict[str, ndarray],
     period: float,
+    figsize: tuple[float, float],
 ) -> Figure:
     """
-    Prepares a Modulus/Phase plot for either h or k.
+    Plots interpolated love numbers for GINS.
     """
 
-    love_numbers_to_plot = zeros(shape=(len(alpha_tab), len(delta_tab)), dtype=complex)
     axes: Iterable[Axes]
-    figure, axes = subplots(1, 2, figsize=(10, 4), sharex=True, sharey=True)
+    figure, axes = subplots(len(tau_values_to_plot), 2, figsize=figsize, sharex=True, sharey=True)
 
-    # For degree 2, to interpolate on last component.
-    for i_alpha, love_numbers_tab in enumerate(love_numbers[:, :, 0, :, 1]):
+    for i_tau_m, (tau_m, ax_line) in enumerate(zip(tau_values_to_plot, axes)):
 
-        love_numbers_line: ndarray
+        ax: Axes
 
-        for dummy_variable, love_numbers_line in enumerate(love_numbers_tab):
+        for ax, side in zip(ax_line, ["Modulus", "Phase"]):
 
-            love_numbers_to_plot[i_alpha, dummy_variable] = (
-                lagrange_order4(
-                    x=log_periods,
-                    y=array(object=love_numbers_line.real, dtype=float),
-                    new_x=array(object=[log(period)], dtype=float),
-                )[0]
-                + 1j
-                * lagrange_order4(
-                    x=log_periods,
-                    y=array(object=love_numbers_line.imag, dtype=float),
-                    new_x=array(object=[log(period)], dtype=float),
-                )[0]
+            ax.xaxis.set_major_formatter(StrMethodFormatter("{x:g}"))
+            ax.yaxis.set_major_formatter(StrMethodFormatter("{x:g}"))
+            ax.imshow(
+                (
+                    (
+                        love_numbers_to_plot[:, :, i_tau_m].real ** 2
+                        + love_numbers_to_plot[:, :, i_tau_m].imag ** 2
+                    )
+                    ** 0.5
+                    if side == "Modulus"
+                    else atan2(
+                        love_numbers_to_plot[:, :, i_tau_m].imag,
+                        love_numbers_to_plot[:, :, i_tau_m].real,
+                    )
+                    * period
+                    / (2 * pi)
+                    * (1 if period > 10 else 365)
+                ),
+                extent=[
+                    love_numbers_for_gins_tabs["alpha"].min(),
+                    love_numbers_for_gins_tabs["alpha"].max(),
+                    love_numbers_for_gins_tabs["delta"].min(),
+                    love_numbers_for_gins_tabs["delta"].max(),
+                ],
+                origin="lower",
+                aspect="auto",
+            )
+            cbar = figure.colorbar(ax.images[0], ax=ax, orientation="vertical")
+            cbar.ax.yaxis.set_major_formatter(StrMethodFormatter("{x:g}"))
+            cbar.set_label(
+                (
+                    ("        years" if period > 10 else "days")
+                    if side == "Phase"
+                    else r"          $|\frac{k_2(\omega)}{k_2^{el}}|$"
+                ),
+                fontsize=10 if side == "Phase" else 12,
+                rotation=0,
             )
 
-    for ax, dummy_variable in zip(axes, ["Modulus", "Phase"]):
+            ax.set_ylabel(r"$\Delta$")
+            ax.set_xlabel(r"$\alpha$")
+            ax.set_title(side + r": \tau_m = " + f"{tau_m:.4f} s")
 
-        ax.xaxis.set_major_formatter(StrMethodFormatter("{x:g}"))
-        ax.yaxis.set_major_formatter(StrMethodFormatter("{x:g}"))
-        ax.imshow(
-            (
-                (love_numbers_to_plot.real**2 + love_numbers_to_plot.imag**2) ** 0.5
-                if dummy_variable == "Modulus"
-                else atan2(love_numbers_to_plot.imag, love_numbers_to_plot.real)
-                * period
-                / (2 * pi)
-                * (1 if period > 10 else 365)
-            ),
-            extent=[alpha_tab.min(), alpha_tab.max(), delta_tab.min(), delta_tab.max()],
-            origin="lower",
-            aspect="auto",
-        )
-        cbar = figure.colorbar(ax.images[0], ax=ax, orientation="vertical")
-        cbar.ax.yaxis.set_major_formatter(StrMethodFormatter("{x:g}"))
-        cbar.set_label(
-            (
-                ("        years" if period > 10 else "days")
-                if dummy_variable == "Phase"
-                else r"          $|\frac{k_2(\omega)}{k_2^{el}}|$"
-            ),
-            fontsize=10 if dummy_variable == "Phase" else 12,
-            rotation=0,
-        )
+    return figure
 
-        ax.set_ylabel(r"$\Delta$")
-        ax.set_xlabel(r"$\alpha$")
-        ax.set_title(dummy_variable)
+
+def plot_love_numbers_for_gins(
+    love_numbers: ndarray,
+    tau_values_to_plot: ndarray,
+    love_numbers_for_gins_tabs: dict[str, ndarray],
+    period: float,
+    figsize: tuple[float, float],
+) -> Figure:
+    """
+    Prepares a Modulus/Phase plot or k_2.
+    """
+
+    love_numbers_to_plot = zeros(
+        shape=(
+            len(love_numbers_for_gins_tabs["alpha"]),
+            len(love_numbers_for_gins_tabs["Delta"]),
+            len(love_numbers_for_gins_tabs["tau_m"]),
+        ),
+        dtype=complex,
+    )
+    log_periods = array(object=log(love_numbers_for_gins_tabs["periods"]), dtype=float)
+
+    # For degree 2, to interpolate on last component.
+    for i_alpha, love_numbers_tab in enumerate(love_numbers[:, :, :, 0, :]):
+
+        love_numbers_array: ndarray
+
+        for i_delta, love_numbers_array in enumerate(love_numbers_tab):
+
+            love_numbers_line: ndarray
+            love_numbers_temp = zeros(
+                shape=(len(love_numbers_for_gins_tabs["tau_m"])), dtype=complex
+            )
+
+            for i_tau_m, love_numbers_line in enumerate(love_numbers_array):
+
+                love_numbers_temp[i_tau_m] = (
+                    lagrange_order4(
+                        x=log_periods,
+                        y=array(object=love_numbers_line.real, dtype=float),
+                        new_x=array(object=[log(period)], dtype=float),
+                    )[0]
+                    + 1j
+                    * lagrange_order4(
+                        x=log_periods,
+                        y=array(object=love_numbers_line.imag, dtype=float),
+                        new_x=array(object=[log(period)], dtype=float),
+                    )[0]
+                )
+
+            love_numbers_to_plot[i_alpha, i_delta, :] = lagrange_order4(
+                x=log(love_numbers_for_gins_tabs["tau_m"]),
+                y=array(object=love_numbers_temp.real, dtype=float),
+                new_x=log(tau_values_to_plot),
+            ) + 1j * lagrange_order4(
+                x=log(love_numbers_for_gins_tabs["tau_m"]),
+                y=array(object=love_numbers_temp.imag, dtype=float),
+                new_x=log(tau_values_to_plot),
+            )
+
+    figure = plot_interpolated_love_numbers_for_gins(
+        love_numbers_to_plot=love_numbers_to_plot,
+        tau_values_to_plot=tau_values_to_plot,
+        love_numbers_for_gins_tabs=love_numbers_for_gins_tabs,
+        period=period,
+        figsize=figsize,
+    )
 
     tight_layout()
 
     return figure
 
 
-def test_plot_love_numbers_for_gins(
+def test_plot_k_2_love_numbers_for_gins(
     path: Path = LOVE_NUMBERS_PATH.joinpath("for_gins"),
     models: Optional[dict[str, str]] = None,
-    periods_tab: ndarray = PERIODS_TAB,
-    alpha_tab: ndarray = ALPHA_TAB_FOR_GINS,
-    delta_tab: ndarray = DELTA_TAB_FOR_GINS,
+    love_numbers_for_gins_tabs: Optional[dict[str, ndarray]] = None,
+    tau_values_to_plot: ndarray = LOVE_NUMBERS_FOR_GINS_TABS["tau_m"][3:-3],
+    periods_values_to_plot: list[float] = list(PARTIAL_PERIOD_TAB) + [433 / 365, 100.0],
 ) -> None:
     """
     Shows the GINS-ready Love numbers in 2D (alpha, delta) for real and imaginary parts.
     """
 
+    if love_numbers_for_gins_tabs is None:
+
+        love_numbers_for_gins_tabs = LOVE_NUMBERS_FOR_GINS_TABS
+
     if models is None:
 
         models = MODELS
 
-    elastic_love_numbers, love_numbers, _, _ = load_love_numbers_for_gins(
-        path=path,
-        models=models,
-        periods_tab=periods_tab,
-        alpha_tab=alpha_tab,
-        delta_tab=delta_tab,
-    )  # (alpha, delta, 2, periods, 2)
-    log_periods = array(object=log(periods_tab), dtype=float)
+    elastic_love_numbers, love_numbers, _, _, _ = load_love_numbers_for_gins(
+        path=path, models=models, love_numbers_for_gins_tabs=love_numbers_for_gins_tabs
+    )  # (alpha, delta, tau_m, degrees, periods)
 
-    for period in list(PARTIAL_PERIOD_TAB) + [433 / 365, 100.0]:
+    for period in periods_values_to_plot:
 
         figure = plot_love_numbers_for_gins(
-            love_numbers=love_numbers / elastic_love_numbers[None, None:, None, :],
-            alpha_tab=alpha_tab,
-            delta_tab=delta_tab,
-            log_periods=log_periods,
+            love_numbers=love_numbers / elastic_love_numbers[None, None, None, :, None],
+            tau_values_to_plot=tau_values_to_plot,
+            love_numbers_for_gins_tabs=love_numbers_for_gins_tabs,
             period=period,
+            figsize=(10, 5 * len(tau_values_to_plot)),
         )
         save_figure(
             figure=figure,
@@ -538,4 +599,4 @@ def test_plot_love_numbers_for_gins(
 
 if __name__ == "__main__":
 
-    test_compare_plot_semi_analytical_partials_to_finite_differences()
+    test_plot_k_2_love_numbers_for_gins()

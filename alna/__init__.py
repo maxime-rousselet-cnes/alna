@@ -12,11 +12,9 @@ from .constants import (
 )
 from .load_solid_earth_model import load_solid_earth_numerical_model
 from .love_numbers_for_gins import (
-    ALPHA_TAB,
-    DELTA_TAB,
     INTEGRATION_PATH,
+    LOVE_NUMBERS_FOR_GINS_TABS,
     MODELS,
-    PERIODS_TAB,
     compute_love_numbers_for_gins,
     load_love_numbers_for_gins,
 )
@@ -34,11 +32,9 @@ from .solid_earth_model import (
 )
 
 to_import = [
-    ALPHA_TAB,
-    DELTA_TAB,
     INTEGRATION_PATH,
+    LOVE_NUMBERS_FOR_GINS_TABS,
     MODELS,
-    PERIODS_TAB,
     compute_love_numbers_for_gins,
     load_love_numbers_for_gins,
     COMPLEX_PARTS,
