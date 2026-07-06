@@ -29,7 +29,7 @@ TEST_ELASTIC_INTEGRATION_PATH = TEST_SOLID_EARTH_NUMERICAL_MODEL_PATH.joinpath(
 )
 
 ## Solid Earth numerical models.
-SOLID_EARTH_NUMERICAL_MODELS_PATH = DATA_PATH.joinpath("solid_earth_numerical_models")
+SOLID_EARTH_NUMERICAL_MODELS_PATH = TEST_PATH.joinpath("solid_earth_numerical_models")
 
 # Michel et al. (2021) reference Love numbers for validation.
 DEFAULT_REFERENCE_LOVE_NUMBERS_PATH = Path("../elastic_benchmark")

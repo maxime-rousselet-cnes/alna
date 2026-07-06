@@ -289,7 +289,7 @@ def test_check_anelastic_settings(
                 )
 
 
-def _test_partials(
+def test_partials(
     models: Optional[dict[str, str]] = None,
     test_path: Path = TEST_SOLID_EARTH_NUMERICAL_MODEL_PATH.joinpath("partials"),
     periods_tab: ndarray = PARTIAL_PERIOD_TAB,
