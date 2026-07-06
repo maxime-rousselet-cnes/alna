@@ -312,7 +312,7 @@ def launch_love_numbers_computing(
     )
     run(
         args=[
-            "python3",
+            "python",
             "exe_love_numbers_jobs_launcher.py",
             "local" if local_mode else "submit",
             "--name",

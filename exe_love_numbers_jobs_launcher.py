@@ -281,7 +281,7 @@ source {quote(str(Path(args.venv) / "bin" / "activate"))}
 """
 
     worker_cmd = [
-        "python3",
+        "python",
         str(LAUNCHER_PATH),
         "worker",
         "--name",
