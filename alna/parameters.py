@@ -7,6 +7,7 @@ from itertools import product
 from json import dumps
 from pathlib import Path
 from subprocess import run
+from sys import executable
 from typing import Optional
 
 from base_models import (
@@ -312,7 +313,7 @@ def launch_love_numbers_computing(
     )
     run(
         args=[
-            "python",
+            executable,
             "exe_love_numbers_jobs_launcher.py",
             "local" if local_mode else "submit",
             "--name",
