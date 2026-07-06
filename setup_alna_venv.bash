@@ -2,24 +2,24 @@
 
 cd ..
 
-python -m venv alna_venv
+python3 -m venv alna_venv
 
 source alna_venv/bin/activate
 
-python -m pip install --upgrade pip setuptools wheel
+python3 -m pip install --upgrade pip setuptools wheel
 
 cd base_models
 
-python -m pip install -r requirements.txt
+python3 -m pip install -r requirements.txt
 
-python -m pip install -e .
+python3 -m pip install -e .
 
-pytest test.py
+python3 -m pytest test.py
 
 cd ../alna
 
-python -m pip install -r requirements.txt
+python3 -m pip install -r requirements.txt
 
-python -m pip install -e .
+python3 -m pip install -e .
 
-pytest tests_base.py
+pthon3 -m pytest tests_base.py

@@ -310,34 +310,9 @@ def launch_love_numbers_computing(
         parameter_lines_file_name=love_numbers_launcher.parameter_lines_file_name,
         parameter_lines_path=love_numbers_launcher.parameter_lines_path,
     )
-    print()
-    print(
-        " ".join(
-            [
-                "python",
-                "exe_love_numbers_jobs_launcher.py",
-                "local" if local_mode else "submit",
-                "--name",
-                love_numbers_launcher.name,
-                "--path",
-                str(love_numbers_launcher.path),
-                "--output_path",
-                str(love_numbers_launcher.output_path),
-                "--period_tab_per_degree",
-                love_numbers_launcher.period_tab_per_degree_file_name,
-                "--period_tab_per_degree_path",
-                str(love_numbers_launcher.period_tab_per_degree_path),
-                "--parameter_lines",
-                love_numbers_launcher.parameter_lines_file_name,
-                "--parameter_lines_path",
-                str(love_numbers_launcher.parameter_lines_path),
-            ]
-        )
-    )
-    print()
     run(
         args=[
-            "python",
+            "python3",
             "exe_love_numbers_jobs_launcher.py",
             "local" if local_mode else "submit",
             "--name",
