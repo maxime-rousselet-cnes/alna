@@ -25,3 +25,5 @@ python -m pip install -r requirements.txt
 python -m pip install -e .
 
 python -m pytest tests_base.py
+
+python -m pytest tests_integration.py
