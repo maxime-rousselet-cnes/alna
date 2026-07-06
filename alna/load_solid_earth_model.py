@@ -23,6 +23,7 @@ def load_solid_earth_numerical_model(
     Loads a solid Earth numerical model and formats its expressions.
     """
 
+    print(Path(".").resolve())
     loaded_content = load_base_model(name=name, path=path)
     love_numbers: dict[str, dict[int, list[list[list[float]]]]] = loaded_content["love_numbers"]
     love_number_partials: dict[str, dict[str, dict[int, list[list[list[float]]]]]] = loaded_content[
