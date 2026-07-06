@@ -7,14 +7,13 @@ from pathlib import Path
 from typing import Optional
 
 from base_models import (
-    LOVE_NUMBERS_PATH,
+    LOVE_NUMBERS_FOR_GINS_PATH,
+    LOVE_NUMBERS_FOR_GINS_TABS,
+    MODELS,
     BoundaryCondition,
     Direction,
-    SolidEarthModelPart,
-    load_base_model,
-    save_base_model,
 )
-from numpy import array, linspace, log, logspace, ndarray, zeros
+from numpy import array, log, ndarray, zeros
 
 from .constants import TEST_ELASTIC_INTEGRATION_PATH
 from .load_solid_earth_model import load_solid_earth_numerical_model
@@ -24,71 +23,10 @@ from .parameters import (
     compose_name_with_invertible_parameters,
     format_name_function,
 )
-from .solid_earth_model import (
-    SolidEarthModelDescription,
-    SolidEarthNumericalModel,
-    SolidEarthParameters,
-)
-
-INTEGRATION_PATH = LOVE_NUMBERS_PATH.joinpath("for_gins")
-LOVE_NUMBERS_FOR_GINS_TABS = {
-    "degrees": [2],
-    "periods": logspace(start=-2, stop=4, num=40, base=10),  # (yr).
-    "alpha": linspace(start=0.15, stop=0.3, num=10),
-    "Delta": logspace(start=-2, stop=1, num=10, base=10),
-    "tau_m": (1 / 3.09e-4) * logspace(start=-1, stop=1, num=10, base=10),  # (s).,
-}
-MODELS = {"elastic": "PREM", "attenuation": "Resovsky", "transient": "reference", "viscous": "VM7"}
-PARAMETERS_NAME = "parameters"
-PARAMETERS_PATH = Path(".")
-
-
-def compute_love_numbers_for_gins(
-    love_numbers_for_gins_tabs: Optional[dict[str, ndarray]] = None,
-    parameters_path: Path = PARAMETERS_PATH,
-    parameters_file_name: str = PARAMETERS_NAME,
-) -> None:
-    """
-    Computes Love numbers of interest and their partial deriavtives for a range of candidate
-    physical models on alpha and Delta parameters.
-    """
-
-    if not love_numbers_for_gins_tabs:
-
-        love_numbers_for_gins_tabs = LOVE_NUMBERS_FOR_GINS_TABS
-
-    profile_description = SolidEarthModelDescription(
-        name=MODELS[SolidEarthModelPart.ELASTIC.value],
-        solid_earth_model_part=SolidEarthModelPart.ELASTIC,
-    )
-    parameters: SolidEarthParameters = load_base_model(
-        name=parameters_file_name, path=parameters_path, base_model_type=SolidEarthParameters
-    )
-    solid_earth_numerical_model: SolidEarthNumericalModel = (
-        profile_description.generate_solid_earth_numerical_model(
-            name=MODELS[SolidEarthModelPart.ELASTIC.value], solid_earth_parameters=parameters
-        )
-    )
-    solid_earth_numerical_model.merge_all(models=MODELS)
-    solid_earth_numerical_model.compute_love_numbers(
-        period_tab_per_degree={
-            degree: love_numbers_for_gins_tabs["periods"]
-            for degree in love_numbers_for_gins_tabs["degrees"]
-        },
-        parameters_to_invert_dictionary={
-            r"\alpha^{MANTLE_0}": list(love_numbers_for_gins_tabs["alpha"]),
-            r"\Delta^{MANTLE_0}": list(love_numbers_for_gins_tabs["Delta"]),
-            r"\omega_{m-inf}^{MANTLE_0}": list(1 / love_numbers_for_gins_tabs["tau_m"]),
-        },
-        path=INTEGRATION_PATH,
-    )
-    save_base_model(
-        obj=love_numbers_for_gins_tabs["periods"], name="periods_tab", path=INTEGRATION_PATH
-    )
 
 
 def load_love_numbers_for_gins(
-    path: Path = INTEGRATION_PATH,
+    path: Path = LOVE_NUMBERS_FOR_GINS_PATH,
     models: Optional[dict[str, str]] = None,
     love_numbers_for_gins_tabs: Optional[dict[str, ndarray]] = None,
 ) -> tuple[ndarray, ndarray, ndarray, ndarray, ndarray]:
@@ -145,7 +83,7 @@ def load_love_numbers_for_gins(
                             r"\Delta^{MANTLE_0}",
                             r"\omega_{m-inf}^{MANTLE_0}",
                         ],
-                        invertible_parameter_tab=[
+                        invertible_parameters_tab=[
                             love_numbers_for_gins_tabs["alpha"][i_alpha],
                             love_numbers_for_gins_tabs["Delta"][i_delta],
                             1 / love_numbers_for_gins_tabs["tau_m"][i_tau_m],

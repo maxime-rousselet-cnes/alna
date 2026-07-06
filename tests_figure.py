@@ -8,7 +8,12 @@ from typing import Iterable, Optional
 from base_models import (
     DEFAULT_MODELS,
     LOVE_NUMBERS_PATH,
+    TEST_ALPHA_TAB,
+    TEST_DELTA_TAB,
+    TEST_ETA_TAB,
     TEST_FIGURES_PATH,
+    TEST_RHO_TAB,
+    TEST_VISCOUS_PERIOD_TAB,
     BoundaryCondition,
     Direction,
     SolidEarthModelPart,
@@ -23,6 +28,7 @@ from numpy import array, atan2, diff, log, log10, meshgrid, ndarray, pi, zeros
 
 from alna import (
     COMPLEX_PARTS,
+    DEFAULT_REFERENCE_LOVE_NUMBERS_PATH,
     LOVE_NUMBERS_FOR_GINS_TABS,
     MODELS,
     SOLID_EARTH_NUMERICAL_MODEL_PART_NAMES_SEPARATOR,
@@ -34,25 +40,18 @@ from alna import (
     load_solid_earth_numerical_model,
     save_figure,
 )
-from integration_tests import (
-    ALPHA_TAB,
-    DELTA_TAB,
+from tests_integration import (
     ELASTIC_PERIOD_TAB,
     ETA_PERIOD_TAB,
-    ETA_TAB,
     PARTIAL_PERIOD_TAB,
-    RHO_TAB,
     TEST_ALPHA_PARTIAL_INTEGRATION_PATH,
     TEST_DELTA_PARTIAL_INTEGRATION_PATH,
     TEST_ELASTIC_INTEGRATION_PATH,
     TEST_ETA_PARTIAL_INTEGRATION_PATH,
     TEST_RHO_PARTIAL_INTEGRATION_PATH,
     TEST_VISCOUS_INTEGRATION_PATH,
-    VISCOUS_PERIOD_TAB,
     load_reference_love_numbers_for_validation,
 )
-
-DEFAULT_REFERENCE_LOVE_NUMBERS_PATH = Path("../../ViscoLove/EARTH_MODELS/PREM_ELASTIC")
 
 
 def test_compare_plot_to_elastic_reference(
@@ -189,7 +188,7 @@ def test_compare_plot_viscous_to_elastic(
     elastic_test_path: Path = TEST_ELASTIC_INTEGRATION_PATH,
     test_path: Path = TEST_VISCOUS_INTEGRATION_PATH,
     path: Path = TEST_FIGURES_PATH,
-    period_tab: ndarray = VISCOUS_PERIOD_TAB,
+    period_tab: ndarray = TEST_VISCOUS_PERIOD_TAB,
 ) -> None:
     """
     Generates a figure of 3 subplots as a function of degree and period, for h', l', and k'.
@@ -265,7 +264,7 @@ def load_love_numbers_for_partials_plot(
                     ),
                 ),
                 parameters_to_invert=[parameter],
-                invertible_parameter_tab=[parameter_value],
+                invertible_parameters_tab=[parameter_value],
             ),
             path=test_path,
         )
@@ -356,7 +355,7 @@ def compare_plot_semi_analytical_partials_to_finite_differences(
     parameter: str = r"\alpha^{MANTLE_0}",
     test_path: Path = TEST_ALPHA_PARTIAL_INTEGRATION_PATH,
     periods_tab: ndarray = PARTIAL_PERIOD_TAB,
-    parameter_tab: ndarray = ALPHA_TAB,
+    parameter_tab: ndarray = TEST_ALPHA_TAB,
 ) -> None:
     """
     Generates a figure of 3 subplots as a function of degree and period, for h', l', and k'.
@@ -400,23 +399,23 @@ def test_compare_plot_semi_analytical_partials_to_finite_differences(
         parameter=r"\rho_0^{LOWER-MANTLE-1_0}",
         test_path=TEST_RHO_PARTIAL_INTEGRATION_PATH,
         periods_tab=ELASTIC_PERIOD_TAB,
-        parameter_tab=RHO_TAB,
+        parameter_tab=TEST_RHO_TAB,
     )
     compare_plot_semi_analytical_partials_to_finite_differences(
         models=models,
         parameter=r"\eta_m^{UPPER-MANTLE_0}",
         test_path=TEST_ETA_PARTIAL_INTEGRATION_PATH,
         periods_tab=ETA_PERIOD_TAB,
-        parameter_tab=ETA_TAB,
+        parameter_tab=TEST_ETA_TAB,
     )
     compare_plot_semi_analytical_partials_to_finite_differences(
-        models=models, parameter_tab=ALPHA_TAB
+        models=models, parameter_tab=TEST_ALPHA_TAB
     )
     compare_plot_semi_analytical_partials_to_finite_differences(
         parameter=r"\Delta^{MANTLE_0}",
         test_path=TEST_DELTA_PARTIAL_INTEGRATION_PATH,
         models=models,
-        parameter_tab=DELTA_TAB,
+        parameter_tab=TEST_DELTA_TAB,
     )
 
 
@@ -595,8 +594,3 @@ def test_plot_k_2_love_numbers_for_gins(
             figure_title="Love_numbers_for_gins_" + str(period) + "yr",
             path=TEST_FIGURES_PATH,
         )
-
-
-if __name__ == "__main__":
-
-    test_plot_k_2_love_numbers_for_gins()

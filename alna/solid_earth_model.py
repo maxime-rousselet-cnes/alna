@@ -1,10 +1,8 @@
 """
-Solid Earth model description class for preprocessing.
+Solid Earth model description class for preprocessing and Solid Earth model class for processing.
 """
 
 from dataclasses import dataclass
-from itertools import product
-from multiprocessing import Pool
 from pathlib import Path
 from typing import Callable, Optional
 
@@ -259,9 +257,9 @@ class SolidEarthNumericalModel(BaseModel):
         partial_expressions_per_parameter, partials_matrix_per_parameter = {}, {}
 
         # Defines formally the partial derivative symbols.
-        for parameter in parameters_to_invert:
+        if self.solid_earth_parameters.compute_partials:
 
-            if self.solid_earth_parameters.compute_partials:
+            for parameter in parameters_to_invert:
 
                 partial_expressions, partials_matrix_for_parameter = partial_symbols(
                     parameter=self.expressions.parameter_expressions[parameter],
@@ -272,7 +270,7 @@ class SolidEarthNumericalModel(BaseModel):
 
         self.love_numbers = {
             part: {
-                n: zeros(shape=(len(period_tab), 3, 3), dtype=float)
+                int(n): zeros(shape=(len(period_tab), 3, 3), dtype=float)
                 for n, period_tab in period_tab_per_degree.items()
             }
             for part in COMPLEX_PARTS
@@ -280,7 +278,7 @@ class SolidEarthNumericalModel(BaseModel):
         self.love_number_partials = {
             part: {
                 parameter: {
-                    n: zeros(shape=(len(period_tab), 3, 3), dtype=float)
+                    int(n): zeros(shape=(len(period_tab), 3, 3), dtype=float)
                     for n, period_tab in period_tab_per_degree.items()
                 }
                 for parameter in parameters_to_invert
@@ -554,9 +552,9 @@ class SolidEarthNumericalModel(BaseModel):
         self.expressions.define_love_number_expressions(n=n)
         y_i_all_partial_symbols: dict[str, list[list[Expr]]] = {}
 
-        for parameter in parameters_to_invert:
+        if self.solid_earth_parameters.compute_partials:
 
-            if self.solid_earth_parameters.compute_partials:
+            for parameter in parameters_to_invert:
 
                 y_i_all_partial_symbols[parameter] = []
                 self.expressions.expressions[r"\frac{\partial L_n}{\partial " + parameter + "}"] = (
@@ -607,9 +605,9 @@ class SolidEarthNumericalModel(BaseModel):
             )
             self.compute_love_numbers_from_surface_solution(integration_context=integration_context)
 
-            for parameter in parameters_to_invert:
+            if self.solid_earth_parameters.compute_partials:
 
-                if self.solid_earth_parameters.compute_partials:
+                for parameter in parameters_to_invert:
 
                     self.integrate_partials(
                         integration_context=integration_context,
@@ -620,7 +618,7 @@ class SolidEarthNumericalModel(BaseModel):
     def prepare_all_propagators(
         self,
         partial_expressions_per_parameter: dict[str, Expr],
-        invertible_parameter_tab: list[float],
+        invertible_parameters_tab: list[float],
         general_propagators_per_layer: list[Expr],
         general_partial_propagators_per_layer: list[dict[str, Expr]],
     ) -> None:
@@ -633,11 +631,11 @@ class SolidEarthNumericalModel(BaseModel):
                 sep=SOLID_EARTH_NUMERICAL_MODEL_NAME_FROM_INVERTIBLE_PARAMETERS_SEPARATOR
             )[0],
             parameters_to_invert=partial_expressions_per_parameter.keys(),
-            invertible_parameter_tab=invertible_parameter_tab,
+            invertible_parameters_tab=invertible_parameters_tab,
         )
 
         for parameter, value in zip(
-            partial_expressions_per_parameter.keys(), invertible_parameter_tab
+            partial_expressions_per_parameter.keys(), invertible_parameters_tab
         ):
 
             self.expressions.terminal_parameter_values[parameter] = value
@@ -692,13 +690,17 @@ class SolidEarthNumericalModel(BaseModel):
     def compute_love_numbers(
         self,
         period_tab_per_degree: dict[int, ndarray],  # (yr).
-        parameters_to_invert_dictionary: Optional[dict[str, list[float]]] = None,
+        parameters_to_invert: Optional[dict[str, float]] = None,
         path: Path = SOLID_EARTH_NUMERICAL_MODELS_PATH,
         format_name: bool = True,
     ) -> None:
         """
         Performs the y_i system integration for every degree and period of the list.
         """
+
+        if not parameters_to_invert:
+
+            parameters_to_invert = {}
 
         if format_name:
 
@@ -707,15 +709,10 @@ class SolidEarthNumericalModel(BaseModel):
                 component_parameters=self.solid_earth_parameters.model.component_parameters,
             )
 
-        parameters_to_invert = (
-            []
-            if parameters_to_invert_dictionary is None
-            else list(parameters_to_invert_dictionary.keys())
-        )
         partial_expressions_per_parameter, partials_matrix_per_parameter = (
             self.initialize_love_numbers_computing(
                 period_tab_per_degree=period_tab_per_degree,
-                parameters_to_invert=parameters_to_invert,
+                parameters_to_invert=list(parameters_to_invert.keys()),
             )
         )
         general_propagators_per_layer: list[Expr] = []
@@ -727,18 +724,18 @@ class SolidEarthNumericalModel(BaseModel):
             general_propagators_per_layer += [layer_model.propagator]
             general_partial_propagators_per_layer += [{}]
 
-            if not self.solid_earth_parameters.compute_partials:
+            if self.solid_earth_parameters.compute_partials:
 
-                continue
+                for parameter in parameters_to_invert.keys():
 
-            for parameter in parameters_to_invert:
-
-                general_partial_propagators_per_layer[-1][parameter] = vector_variation_equation(
-                    dynamic=layer_model.propagator,
-                    parameter=self.expressions.parameter_expressions[parameter],
-                    partials=partials_matrix_per_parameter[parameter],
-                    state_vector_line=Y_I_STATE_VECTOR_LINE,
-                )
+                    general_partial_propagators_per_layer[-1][parameter] = (
+                        vector_variation_equation(
+                            dynamic=layer_model.propagator,
+                            parameter=self.expressions.parameter_expressions[parameter],
+                            partials=partials_matrix_per_parameter[parameter],
+                            state_vector_line=Y_I_STATE_VECTOR_LINE,
+                        )
+                    )
 
         parallel_context = ParallelContext(
             partial_expressions_per_parameter=partial_expressions_per_parameter,
@@ -747,30 +744,13 @@ class SolidEarthNumericalModel(BaseModel):
             path=path,
             period_tab_per_degree=period_tab_per_degree,
         )
-
-        if parameters_to_invert_dictionary is None:
-
-            model = compute_love_numbers_parallel(
-                model=self,
-                invertible_parameter_tab=[],
-                parallel_context=parallel_context,
-            )
-            self.love_numbers = model.love_numbers
-            self.love_number_partials = model.love_number_partials
-
-        else:
-
-            with Pool() as p:
-
-                p.starmap(
-                    compute_love_numbers_parallel,
-                    [
-                        (self, invertible_parameter_tab, parallel_context)
-                        for invertible_parameter_tab in product(
-                            *parameters_to_invert_dictionary.values()
-                        )
-                    ],
-                )
+        model = compute_love_numbers_job(
+            model=self,
+            invertible_parameters_tab=list(parameters_to_invert.values()),
+            parallel_context=parallel_context,
+        )
+        self.love_numbers = model.love_numbers
+        self.love_number_partials = model.love_number_partials
 
 
 @dataclass
@@ -787,9 +767,9 @@ class ParallelContext:
     period_tab_per_degree: dict[int, ndarray]
 
 
-def compute_love_numbers_parallel(
+def compute_love_numbers_job(
     model: SolidEarthNumericalModel,
-    invertible_parameter_tab: list[float],
+    invertible_parameters_tab: list[float],
     parallel_context: ParallelContext,
 ) -> SolidEarthNumericalModel:
     """
@@ -799,7 +779,7 @@ def compute_love_numbers_parallel(
 
     model.prepare_all_propagators(
         partial_expressions_per_parameter=parallel_context.partial_expressions_per_parameter,
-        invertible_parameter_tab=invertible_parameter_tab,
+        invertible_parameters_tab=invertible_parameters_tab,
         general_propagators_per_layer=parallel_context.propagators_per_layer,
         general_partial_propagators_per_layer=parallel_context.partial_propagators_per_layer,
     )
@@ -811,8 +791,8 @@ def compute_love_numbers_parallel(
     for n, period_tab in parallel_context.period_tab_per_degree.items():
 
         model.compute_love_numbers_for_degree(
-            n=n,
-            period_tab=period_tab,
+            n=int(n),
+            period_tab=array(object=period_tab, dtype=float),
             parameters_to_invert=parallel_context.partial_expressions_per_parameter.keys(),
         )
 

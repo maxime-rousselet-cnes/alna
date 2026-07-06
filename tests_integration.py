@@ -5,19 +5,36 @@ Tests the consistency of integration. To test via pytest integration_tests.py.
 from pathlib import Path
 from typing import Optional
 
-from base_models import DEFAULT_MODELS, SolidEarthModelPart, load_base_model
-from numpy import array, linspace, logspace, ndarray, zeros
+from base_models import (
+    DEFAULT_MODELS,
+    LOCAL_MODE,
+    LOVE_NUMBERS_FOR_GINS_PATH,
+    LOVE_NUMBERS_FOR_GINS_TABS,
+    MODELS,
+    TEST_ALPHA_TAB,
+    TEST_ETA_TAB,
+    TEST_RHO_TAB,
+    TEST_VISCOUS_PERIOD_TAB,
+    SolidEarthModelPart,
+    load_base_model,
+    save_base_model,
+)
+from numpy import array, ndarray, zeros
 
 from alna import (
     DEFAULT_COMPONENT_PARAMETERS,
+    DEFAULT_REFERENCE_LOVE_NUMBERS_PATH,
+    SOLID_EARTH_NUMERICAL_MODELS_PATH,
     TEST_ELASTIC_INTEGRATION_PATH,
+    LoveNumbersLauncher,
     SolidEarthModelDescription,
     SolidEarthNumericalModel,
     SolidEarthParameters,
     build_base_name,
+    launch_love_numbers_computing,
     load_solid_earth_numerical_model,
 )
-from base_tests import (
+from tests_base import (
     ELASTIC_PERIOD_TAB,
     PARTIAL_PERIOD_TAB,
     TEST_PARAMETERS_SAVE_PATH,
@@ -26,11 +43,6 @@ from base_tests import (
     verify_solid_earth_numerical_model_consistency,
 )
 
-N_PERIODS_VISCOUS_INTEGRATION_TEST = 20
-VISCOUS_PERIOD_TAB = logspace(
-    -3, 5, num=N_PERIODS_VISCOUS_INTEGRATION_TEST, base=10
-)  # (yr), from sub-daily to 100 kyr.
-DEFAULT_REFERENCE_LOVE_NUMBERS_PATH = Path("../../ViscoLove/EARTH_MODELS/PREM_ELASTIC")
 NUMERICAL_TOLERANCE = 5e-5
 
 TEST_VISCOUS_INTEGRATION_PATH = TEST_SOLID_EARTH_NUMERICAL_MODEL_PATH.joinpath(
@@ -45,10 +57,6 @@ TEST_DELTA_PARTIAL_INTEGRATION_PATH = TEST_SOLID_EARTH_NUMERICAL_MODEL_PATH.join
 TEST_RHO_PARTIAL_INTEGRATION_PATH = TEST_SOLID_EARTH_NUMERICAL_MODEL_PATH.joinpath("rho_partials")
 TEST_ETA_PARTIAL_INTEGRATION_PATH = TEST_SOLID_EARTH_NUMERICAL_MODEL_PATH.joinpath("eta_partials")
 ETA_PERIOD_TAB = array(object=[1, 10, 100])
-ETA_TAB = linspace(start=1e18, stop=1e19, num=11)
-ALPHA_TAB = linspace(start=0.2, stop=0.3, num=101)
-RHO_TAB = linspace(start=7000, stop=9000, num=101)
-DELTA_TAB = linspace(start=4.0, stop=15.0, num=101)
 
 
 def load_reference_love_number_file_for_validation(file_path: Path) -> tuple[list[int], ndarray]:
@@ -172,7 +180,7 @@ def test_integrate_elastic(
 
 def test_integrate_viscous(
     models: Optional[dict[str, str]] = None,
-    period_tab: ndarray = VISCOUS_PERIOD_TAB,
+    periods_tab: ndarray = TEST_VISCOUS_PERIOD_TAB,
     elastic_test_path: Path = TEST_ELASTIC_INTEGRATION_PATH,
     test_path: Path = TEST_VISCOUS_INTEGRATION_PATH,
 ) -> None:
@@ -185,15 +193,19 @@ def test_integrate_viscous(
         name=models[SolidEarthModelPart.ELASTIC.value], path=elastic_test_path
     )
     solid_earth_numerical_model.merge_all(models=models)
-    components = solid_earth_numerical_model.solid_earth_parameters.model.component_parameters
-    components.viscous_component = True
-    components.transient_component = False
-    solid_earth_numerical_model.solid_earth_parameters.model.component_parameters = components
-    solid_earth_numerical_model.compute_love_numbers(
+    solid_earth_numerical_model.save(path=test_path)
+    launch_love_numbers_computing(
         period_tab_per_degree={
-            degree: period_tab for degree in solid_earth_numerical_model.love_numbers["real"].keys()
+            degree: periods_tab
+            for degree in solid_earth_numerical_model.love_numbers["real"].keys()
         },
-        path=test_path,
+        local_mode=LOCAL_MODE,
+        love_numbers_launcher=LoveNumbersLauncher(
+            name=solid_earth_numerical_model.name,
+            path=test_path,
+            output_path=test_path,
+        ),
+        base_command=["--not_compute_partials", "--force_viscous"],
     )
 
 
@@ -201,7 +213,7 @@ def integrate_partials_per_parameter(
     models: Optional[dict[str, str]] = None,
     test_path: Path = TEST_ALPHA_PARTIAL_INTEGRATION_PATH,
     periods_tab: ndarray = PARTIAL_PERIOD_TAB,
-    parameter_tab: ndarray = ALPHA_TAB,
+    parameter_tab: ndarray = TEST_ALPHA_TAB,
     parameter: str = r"\alpha^{MANTLE_0}",
 ) -> None:
     """
@@ -210,16 +222,16 @@ def integrate_partials_per_parameter(
     """
 
     models = initialize_test(models=models, test_path=test_path)
-    solid_earth_numerical_model = load_solid_earth_numerical_model(
-        name=build_base_name(models=models),
-        path=test_path.parent,
-        force_transient="alpha" in parameter or "Delta" in parameter,
-        force_viscous="eta_m" in parameter,
-    )
-    solid_earth_numerical_model.compute_love_numbers(
+    launch_love_numbers_computing(
         period_tab_per_degree={2: periods_tab},
-        parameters_to_invert_dictionary={parameter: list(parameter_tab)},
-        path=test_path,
+        local_mode=LOCAL_MODE,
+        parameters={parameter: parameter_tab},
+        love_numbers_launcher=LoveNumbersLauncher(
+            name=build_base_name(models=models),
+            path=test_path.parent,
+            output_path=test_path,
+        ),
+        base_command=["--compute_partials", "--force_viscous", "--force_transient"],
     )
 
 
@@ -233,24 +245,72 @@ def test_integrate_partials(models: Optional[dict[str, str]] = None) -> None:
         models=models,
         test_path=TEST_RHO_PARTIAL_INTEGRATION_PATH,
         periods_tab=ELASTIC_PERIOD_TAB,
-        parameter_tab=RHO_TAB,
+        parameter_tab=TEST_RHO_TAB,
         parameter=r"\rho_0^{LOWER-MANTLE-1_0}",
     )
     integrate_partials_per_parameter(
         models=models,
         test_path=TEST_ETA_PARTIAL_INTEGRATION_PATH,
         periods_tab=ETA_PERIOD_TAB,
-        parameter_tab=ETA_TAB,
+        parameter_tab=TEST_ETA_TAB,
         parameter=r"\eta_m^{UPPER-MANTLE_0}",
     )
     integrate_partials_per_parameter(models=models)
 
 
-if __name__ == "__main__":
+PARAMETERS_NAME = "parameters"
+PARAMETERS_PATH = Path(".")
 
-    integrate_partials_per_parameter()
-    integrate_partials_per_parameter(
-        test_path=TEST_DELTA_PARTIAL_INTEGRATION_PATH,
-        parameter_tab=DELTA_TAB,
-        parameter=r"\Delta^{MANTLE_0}",
+
+def test_compute_love_numbers_for_gins(
+    love_numbers_for_gins_tabs: Optional[dict[str, ndarray]] = None,
+    parameters_path: Path = PARAMETERS_PATH,
+    parameters_file_name: str = PARAMETERS_NAME,
+    path: Path = SOLID_EARTH_NUMERICAL_MODELS_PATH,
+) -> None:
+    """
+    Computes Love numbers of interest and their partial deriavtives for a range of candidate
+    physical models on alpha and Delta parameters.
+    """
+
+    if not love_numbers_for_gins_tabs:
+
+        love_numbers_for_gins_tabs = LOVE_NUMBERS_FOR_GINS_TABS
+
+    profile_description = SolidEarthModelDescription(
+        name=MODELS[SolidEarthModelPart.ELASTIC.value],
+        solid_earth_model_part=SolidEarthModelPart.ELASTIC,
+    )
+    parameters: SolidEarthParameters = load_base_model(
+        name=parameters_file_name, path=parameters_path, base_model_type=SolidEarthParameters
+    )
+    solid_earth_numerical_model: SolidEarthNumericalModel = (
+        profile_description.generate_solid_earth_numerical_model(
+            name=MODELS[SolidEarthModelPart.ELASTIC.value], solid_earth_parameters=parameters
+        )
+    )
+    save_base_model(
+        obj=love_numbers_for_gins_tabs["periods"],
+        name="periods_tab",
+        path=LOVE_NUMBERS_FOR_GINS_PATH,
+    )
+    solid_earth_numerical_model.merge_all(models=MODELS)
+    solid_earth_numerical_model.save(path=path)
+    launch_love_numbers_computing(
+        period_tab_per_degree={
+            degree: love_numbers_for_gins_tabs["periods"]
+            for degree in love_numbers_for_gins_tabs["degrees"]
+        },
+        local_mode=LOCAL_MODE,
+        parameters={
+            r"\alpha^{MANTLE_0}": list(love_numbers_for_gins_tabs["alpha"]),
+            r"\Delta^{MANTLE_0}": list(love_numbers_for_gins_tabs["Delta"]),
+            r"\omega_{m-inf}^{MANTLE_0}": list(1 / love_numbers_for_gins_tabs["tau_m"]),
+        },
+        love_numbers_launcher=LoveNumbersLauncher(
+            name=solid_earth_numerical_model.name,
+            path=path,
+            output_path=LOVE_NUMBERS_FOR_GINS_PATH,
+        ),
+        base_command=["--compute_partials", "--force_viscous", "--force_transient"],
     )

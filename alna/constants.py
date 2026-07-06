@@ -6,7 +6,7 @@ from pathlib import Path
 
 from base_models import DATA_PATH, SOLID_EARTH_MODEL_PROFILES, TEST_FIGURES_PATH, TEST_PATH
 from matplotlib.figure import Figure
-from numpy import arange, array, concatenate, exp, ndarray, pi
+from numpy import arange, array, asarray, concatenate, exp, ndarray, pi
 from numpy.polynomial.laguerre import laggauss
 from sympy import Expr, symbols
 
@@ -31,6 +31,14 @@ TEST_ELASTIC_INTEGRATION_PATH = TEST_SOLID_EARTH_NUMERICAL_MODEL_PATH.joinpath(
 ## Solid Earth numerical models.
 SOLID_EARTH_NUMERICAL_MODELS_PATH = DATA_PATH.joinpath("solid_earth_numerical_models")
 
+# Michel et al. (2021) reference Love numbers for validation.
+DEFAULT_REFERENCE_LOVE_NUMBERS_PATH = Path("../elastic_benchmark")
+
+# For parallel computing.
+DEFAULT_PERIOD_TAB_PER_DEGREE_FILE_NAME = "period_tab_per_degree"
+DEFAULT_PERIOD_TAB_PER_DEGREE_PATH = TEST_PATH.joinpath("period_tab_per_degree")
+DEFAULT_PARAMETER_LINES_FILE_NAME = "parameter_lines.jsonl"
+DEFAULT_PARAMETER_LINES_PATH = TEST_PATH.joinpath("parameter_lines")
 
 # Universal Gravitationnal constant (m^3.kg^-1.s^-2).
 G = 6.67430e-11
@@ -188,7 +196,7 @@ def compute_omega_tab(period_tab: ndarray) -> ndarray:
     Pulsation (rad.s^-1) from period (yr).
     """
 
-    return 2 * pi / (SECONDS_PER_YEAR * period_tab)
+    return 2 * pi / (SECONDS_PER_YEAR * asarray(a=period_tab, dtype=float))
 
 
 def save_figure(figure: Figure, figure_title: str, path: Path = TEST_FIGURES_PATH) -> None:

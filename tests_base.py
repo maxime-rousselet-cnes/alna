@@ -8,6 +8,7 @@ from typing import Optional
 
 from base_models import (
     DEFAULT_MODELS,
+    LOCAL_MODE,
     TEST_PATH,
     SolidEarthModelPart,
     load_base_model,
@@ -18,19 +19,21 @@ from numpy import array, ndarray
 from alna import (
     COMPLEX_PARTS,
     TEST_SOLID_EARTH_NUMERICAL_MODEL_PATH,
+    LoveNumbersLauncher,
     SolidEarthModelDescription,
     SolidEarthNumericalModel,
     SolidEarthParameters,
     build_base_name,
+    launch_love_numbers_computing,
     load_solid_earth_numerical_model,
 )
+from exe_love_numbers_computing import ELASTIC_PERIOD_TAB
 
 TEST_SOLID_EARTH_MODEL_PROFILE_DESCRIPTIONS_PATH = TEST_PATH.joinpath(
     "solid_earth_model_profile_descriptions"
 )
 TEST_PARAMETERS_FILE_PATH = Path(".")
 TEST_PARAMETERS_SAVE_PATH = TEST_PATH.joinpath("solid_earth_parameters")
-ELASTIC_PERIOD_TAB = array(object=[1.0])  # (yr).
 PARTIAL_PERIOD_TAB = array(object=[1.0, 9.3, 18.6])  # (yr).
 
 
@@ -275,8 +278,14 @@ def test_check_anelastic_settings(
                 )
                 solid_earth_numerical_model.solid_earth_parameters = parameters
                 solid_earth_numerical_model.name = initial_name
-                solid_earth_numerical_model.compute_love_numbers(
-                    period_tab_per_degree={2: periods_tab}, path=test_path
+                solid_earth_numerical_model.save(path=test_path)
+                launch_love_numbers_computing(
+                    period_tab_per_degree={2: periods_tab},
+                    local_mode=True,
+                    love_numbers_launcher=LoveNumbersLauncher(
+                        name=initial_name, output_path=test_path
+                    ),
+                    base_command=["--not_compute_partials"],
                 )
 
 
@@ -291,17 +300,14 @@ def test_partials(
     """
 
     models = initialize_test(models=models, test_path=test_path)
-    solid_earth_numerical_model = load_solid_earth_numerical_model(
-        name=build_base_name(models=models),
-        path=test_path.parent,
-        force_transient=True,
-        force_viscous=True,
-    )
-    solid_earth_numerical_model.compute_love_numbers(
+    launch_love_numbers_computing(
         period_tab_per_degree={2: periods_tab},
-        parameters_to_invert_dictionary={
-            r"\alpha^{MANTLE_0}": [0.2, 0.3],
-            r"\eta_m^{UPPER-MANTLE_0}": [3e20, 3e21],
-        },
-        path=test_path,
+        local_mode=LOCAL_MODE,
+        parameters={r"\alpha^{MANTLE_0}": [0.2, 0.3], r"\eta_m^{UPPER-MANTLE_0}": [3e20, 3e21]},
+        love_numbers_launcher=LoveNumbersLauncher(
+            name=build_base_name(models=models),
+            path=test_path.parent,
+            output_path=test_path,
+        ),
+        base_command=["--compute_partials", "--force_transient", "--force_viscous"],
     )
