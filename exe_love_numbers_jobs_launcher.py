@@ -97,36 +97,50 @@ def append_common_cli_args(cmd: list[str], args: Namespace) -> None:
     """
 
     if args.path:
-        cmd.extend(["--path", str(args.path)])
+
+        path: Path = args.path
+        cmd.extend(["--path", str(path.resolve())])
 
     if args.output_path:
-        cmd.extend(["--output_path", str(args.output_path)])
+
+        output_path: Path = args.output_path
+        cmd.extend(["--output_path", str(output_path.resolve())])
 
     if args.period_tab_per_degree:
+
         cmd.extend(["--period_tab_per_degree", str(args.period_tab_per_degree)])
 
     if args.period_tab_per_degree_path:
-        cmd.extend(["--period_tab_per_degree_path", str(args.period_tab_per_degree_path)])
+
+        period_tab_per_degree_path: Path = args.period_tab_per_degree_path
+        cmd.extend(["--period_tab_per_degree_path", str(period_tab_per_degree_path.resolve())])
 
     if args.force_transient:
+
         cmd.append("--force_transient")
 
     if args.force_not_transient:
+
         cmd.append("--force_not_transient")
 
     if args.force_viscous:
+
         cmd.append("--force_viscous")
 
     if args.force_not_viscous:
+
         cmd.append("--force_not_viscous")
 
     if args.compute_partials:
+
         cmd.append("--compute_partials")
 
     if args.not_compute_partials:
+
         cmd.append("--not_compute_partials")
 
     if args.not_format_name:
+
         cmd.append("--not_format_name")
 
 
@@ -247,6 +261,7 @@ def make_slurm_script(args: Namespace, workdir: Path = DEFAULT_WORKDIR) -> Path:
     slurm_file.parent.mkdir(parents=True, exist_ok=True)
 
     logs_dir = workdir.joinpath("logs")
+    parameter_lines_path: Path = args.parameter_lines_path
 
     preamble = f"""#!/bin/bash
 
@@ -269,8 +284,8 @@ if [ -z "${{SLURM_ARRAY_TASK_ID:-}}" ]; then
     exit 1
 fi
 
-mkdir -p {quote(str(logs_dir))}
-cd {quote(str(workdir))}
+mkdir -p {quote(str(logs_dir.resolve()))}
+cd {quote(str(workdir.resolve()))}
 
 if command -v module >/dev/null 2>&1; then
     module purge
@@ -282,7 +297,7 @@ source {quote(str(Path(args.venv) / "bin" / "activate"))}
 
     worker_cmd = [
         executable,
-        str(LAUNCHER_PATH),
+        str(LAUNCHER_PATH.resolve()),
         "worker",
         "--name",
         str(args.name),
@@ -291,7 +306,7 @@ source {quote(str(Path(args.venv) / "bin" / "activate"))}
         "--parameter_lines",
         str(args.parameter_lines),
         "--parameter_lines_path",
-        str(args.parameter_lines_path),
+        str(parameter_lines_path.resolve()),
     ]
 
     append_common_cli_args(cmd=worker_cmd, args=args)
@@ -323,7 +338,7 @@ def submit_slurm(args: Namespace, workdir: Path = DEFAULT_WORKDIR) -> None:
 
         array_spec += f"%{args.max_running}"
 
-    cmd = ["sbatch", f"--array={array_spec}", str(slurm_file)]
+    cmd = ["sbatch", f"--array={array_spec}", str(slurm_file.resolve())]
     print("Submitting Slurm job array:")
     print(" ".join(quote(x) for x in cmd))
 
@@ -399,7 +414,7 @@ def parse_multi_job_args() -> Namespace:
     submit_parser.add_argument("--mem", default="4G")
     submit_parser.add_argument("--cpus_per_task", type=int, default=1)
     submit_parser.add_argument("--max_running", type=int, default=None)
-    submit_parser.add_argument("--venv", default=DEFAULT_CLUSTER_VENV)
+    submit_parser.add_argument("--venv", default=DEFAULT_CLUSTER_VENV.resolve())
     submit_parser.add_argument("--python_module", default=DEFAULT_CLUSTER_PYTHON_MODULE)
     submit_parser.add_argument("--dry_run", action="store_true")
 
