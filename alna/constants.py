@@ -14,7 +14,7 @@ N_GAUSS_LAGUERRE = 64
 N_LERCH_SERIES = 50
 T_GAUSS_LAGUERRE, W_GAUSS_LAGUERRE = laggauss(deg=N_GAUSS_LAGUERRE)
 
-ROOT_PATH = Path("../alna")
+ROOT_PATH = Path("../alna").resolve()
 
 ### Solid Earth model descriptions.
 SOLID_EARTH_MODEL_PROFILE_DESCRIPTIONS_ROOT_PATH = ROOT_PATH.joinpath(
@@ -35,7 +35,7 @@ TEST_ELASTIC_INTEGRATION_PATH = TEST_SOLID_EARTH_NUMERICAL_MODEL_PATH.joinpath(
 SOLID_EARTH_NUMERICAL_MODELS_PATH = TEST_PATH.joinpath("solid_earth_numerical_models")
 
 # Michel et al. (2021) reference Love numbers for validation.
-DEFAULT_REFERENCE_LOVE_NUMBERS_PATH = Path("../elastic_benchmark")
+DEFAULT_REFERENCE_LOVE_NUMBERS_PATH = Path("../elastic_benchmark").resolve()
 
 # For parallel computing.
 DEFAULT_PERIOD_TAB_PER_DEGREE_FILE_NAME = "period_tab_per_degree"

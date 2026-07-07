@@ -9,7 +9,7 @@ from typing import Optional
 
 from base_models import DEFAULT_MODELS, MODELS, SolidEarthModelPart, load_base_model
 from numpy import array
-from pytest import Metafunc
+from pytest import Config
 
 from alna import (
     DEFAULT_COMPONENT_PARAMETERS,
@@ -30,60 +30,6 @@ from alna import (
     viscous_model_integration_test,
 )
 
-DEFAULT_LOCAL_MODE = False
-DEFAULT_N_PARAMETER_VALUES = 2
-DEFAULT_N_PERIODS = 2
-
-
-def add_common_options(parser: Namespace) -> None:
-    """
-    Adds the 3 optional parameters used both by pytest and by direct Python execution.
-    """
-
-    parser.addoption(
-        "--local_mode",
-        action="store_true",
-        default=DEFAULT_LOCAL_MODE,
-        help="Run tests in local mode.",
-    )
-    parser.addoption(
-        "--n_parameter_values",
-        type=int,
-        default=DEFAULT_N_PARAMETER_VALUES,
-        help="Number of parameter values to test for GINS-ready Love numbers.",
-    )
-    parser.addoption(
-        "--n_periods",
-        type=int,
-        default=DEFAULT_N_PERIODS,
-        help="Number of periods to integrate the Love numbers at.",
-    )
-
-
-def pytest_addoption(parser: Namespace) -> None:
-    """
-    Adds command-line options for pytest.
-    """
-
-    add_common_options(parser=parser)
-
-
-def pytest_generate_tests(metafunc: Metafunc) -> None:
-    """
-    Injects CLI values into tests only when the test asks for these parameters.
-    """
-
-    option_names = ["local_mode", "n_parameter_values", "n_periods"]
-
-    for option_name in option_names:
-
-        if option_name in metafunc.fixturenames:
-
-            metafunc.parametrize(
-                option_name,
-                [metafunc.config.getoption(option_name)],
-            )
-
 
 def test_integrate_elastic(
     model: str = DEFAULT_MODELS[SolidEarthModelPart.ELASTIC.value],
@@ -100,11 +46,6 @@ def test_integrate_elastic(
     """
 
     initialize_test(models=None, test_path=test_path)
-    # TODO: & rewrite tests_figures.py.
-    print()
-    print(executable)
-    print(Path(".").resolve().absolute())
-    print()
     degrees_list, reference_love_numbers = load_reference_love_numbers_for_validation(
         path=reference_love_numbers_path
     )
@@ -148,29 +89,29 @@ def test_integrate_elastic(
         )
 
 
-def test_integrate_viscous(local_mode: bool = True, n_periods: int = 2) -> None:
+def test_integrate_viscous(test_config: Config) -> None:
     """
     Integrates a model to benchmark in the Maxwell setting.
     """
 
-    viscous_model_integration_test(local_mode=local_mode, n_periods=n_periods)
+    viscous_model_integration_test(
+        local_mode=test_config["local_mode"], n_periods=test_config["n_periods"]
+    )
 
 
-def test_integrate_partials_per_parameter(
-    local_mode: bool = True, n_partial_tests: int = 2
-) -> None:
+def test_integrate_partials_per_parameter(test_config: Config) -> None:
     """
     Integrates partiel to compare to finite differences, for an elastic parameter, a viscous
     parameter and a transient parameter.
     """
 
-    partials_per_parameter_integration_tests(local_mode=local_mode, n_partial_tests=n_partial_tests)
+    partials_per_parameter_integration_tests(
+        local_mode=test_config["local_mode"], n_partial_tests=test_config["n_parameter_values"]
+    )
 
 
 def test_compute_love_numbers_for_gins(
-    local_mode: bool = True,
-    n_parameter_values: int = 2,
-    n_periods: int = 2,
+    test_config: Config,
     degrees: Optional[list[int]] = None,
     models: Optional[dict[str, str]] = None,
 ) -> None:
@@ -180,9 +121,9 @@ def test_compute_love_numbers_for_gins(
     """
 
     compute_love_numbers_for_gins(
-        local_mode=local_mode,
-        n_parameter_values=n_parameter_values,
-        n_periods=n_periods,
+        local_mode=test_config["local_mode"],
+        n_parameter_values=test_config["n_parameter_values"],
+        n_periods=test_config["n_periods"],
         degrees=degrees if degrees else [2],
         models=models,
     )
@@ -198,19 +139,19 @@ def parse_args() -> Namespace:
     parser.add_argument(
         "--local_mode",
         action="store_true",
-        default=DEFAULT_LOCAL_MODE,
+        default=False,
         help="Run tests in local mode.",
     )
     parser.add_argument(
         "--n_parameter_values",
         type=int,
-        default=DEFAULT_N_PARAMETER_VALUES,
+        default=2,
         help="Number of parameter values to test for GINS-ready Love numbers.",
     )
     parser.add_argument(
         "--n_periods",
         type=int,
-        default=DEFAULT_N_PERIODS,
+        default=2,
         help="Number of periods to integrate the Love numbers at.",
     )
 
