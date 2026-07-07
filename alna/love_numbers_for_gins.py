@@ -149,19 +149,19 @@ def load_love_numbers_for_gins(
                             r"\omega_{m-inf}^{MANTLE_0}",
                         ],
                         invertible_parameters_tab=[
-                            love_numbers_for_gins_tabs["alpha"][i_alpha],
-                            love_numbers_for_gins_tabs["Delta"][i_delta],
-                            1 / love_numbers_for_gins_tabs["tau_m"][i_tau_m],
+                            love_numbers_for_gins_tabs[r"\alpha^{MANTLE_0}"][i_alpha],
+                            love_numbers_for_gins_tabs[r"\Delta^{MANTLE_0}"][i_delta],
+                            love_numbers_for_gins_tabs[r"\omega_{m-inf}^{MANTLE_0}"][i_tau_m],
                         ],
                     ),
                     path=path.joinpath(directory),
                 )
 
-                if len(shape) == 1:
+                if len(shape) <= 1:
 
                     shape = tuple(
                         [len(tab) for tab in love_numbers_for_gins_tabs.values()]
-                        + [len(model.love_numbers.keys())]
+                        + [len(model.love_numbers["real"].keys())]
                         + list(shape)
                     )
                     love_numbers = zeros(
@@ -176,7 +176,7 @@ def load_love_numbers_for_gins(
                         for parameter in love_numbers_for_gins_tabs.keys()
                     }
 
-                for i_degree, degree in enumerate(model.love_numbers.keys()):
+                for i_degree, degree in enumerate(model.love_numbers["real"].keys()):
 
                     love_numbers[i_alpha, i_delta, i_tau_m, i_degree] = (
                         model.love_numbers["real"][degree][
@@ -210,7 +210,9 @@ def load_love_numbers_for_gins(
                         i_alpha, i_delta, i_tau_m, i_degree
                     ] = (
                         log(10)
-                        * love_numbers_for_gins_tabs["delta"][None, :, None, None, None]
+                        * love_numbers_for_gins_tabs[r"\Delta^{MANTLE_0}"][
+                            None, :, None, None, None
+                        ]
                         * (
                             model.love_number_partials["real"][r"\Delta^{MANTLE_0}"][degree][
                                 :,
@@ -230,7 +232,10 @@ def load_love_numbers_for_gins(
                     ] = (
                         -log(10)
                         # Because of inverse change of variable.
-                        * love_numbers_for_gins_tabs["tau_m"][None, :, None, None, None] ** 3
+                        * love_numbers_for_gins_tabs[r"\omega_{m-inf}^{MANTLE_0}"][
+                            None, :, None, None, None
+                        ]
+                        ** (-3)
                         * (
                             model.love_number_partials["real"][r"\omega_{m-inf}^{MANTLE_0}"][
                                 degree

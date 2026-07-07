@@ -7,7 +7,6 @@ from typing import Iterable, Optional
 
 from base_models import (
     DEFAULT_MODELS,
-    LOVE_NUMBERS_PATH,
     TEST_FIGURES_PATH,
     BoundaryCondition,
     Direction,
@@ -20,12 +19,13 @@ from matplotlib.colors import SymLogNorm
 from matplotlib.figure import Figure
 from matplotlib.pyplot import get_cmap, subplots, suptitle, tight_layout
 from matplotlib.ticker import StrMethodFormatter
-from numpy import array, atan2, diff, log, log10, meshgrid, ndarray, pi, zeros
+from numpy import array, atan2, diff, linspace, log, log10, logspace, meshgrid, ndarray, pi, zeros
 
 from alna import (
     COMPLEX_PARTS,
     DEFAULT_REFERENCE_LOVE_NUMBERS_PATH,
     MODELS,
+    PARTIAL_PERIOD_TAB,
     SOLID_EARTH_NUMERICAL_MODEL_PART_NAMES_SEPARATOR,
     TEST_ELASTIC_INTEGRATION_PATH,
     TEST_SOLID_EARTH_NUMERICAL_MODEL_PATH,
@@ -36,6 +36,7 @@ from alna import (
     load_love_numbers_for_gins,
     load_reference_love_numbers_for_validation,
     load_solid_earth_numerical_model,
+    parameters_for_gins,
     save_figure,
 )
 
@@ -232,13 +233,16 @@ def load_love_numbers_for_partials_plot(
     models: dict[str, str],
     test_path: Path,
     periods_tab: ndarray,
-    parameter_tab: ndarray,
     parameter: str,
-) -> tuple[ndarray, ndarray]:
+) -> tuple[ndarray, ndarray, ndarray]:
     """
     Load love numbers and their partials for all parameter values.
     """
 
+    parameter_tab = array(
+        object=[float(file.name.split(parameter)[1][1:-4]) for file in test_path.glob(parameter)],
+        dtype=float,
+    )
     love_numbers = zeros(shape=(len(periods_tab), 3, len(parameter_tab)), dtype=complex)
     love_number_partials = zeros(shape=(len(periods_tab), 3, len(parameter_tab)), dtype=complex)
 
@@ -276,7 +280,7 @@ def load_love_numbers_for_partials_plot(
             ]
         )
 
-    return love_numbers, love_number_partials
+    return parameter_tab, love_numbers, love_number_partials
 
 
 def plot_love_number_partials(
@@ -344,9 +348,7 @@ def plot_love_number_partials(
 def compare_plot_semi_analytical_partials_to_finite_differences(
     models: Optional[dict[str, str]] = None,
     parameter: str = r"\alpha^{MANTLE_0}",
-    test_path: Path = TEST_ALPHA_PARTIAL_INTEGRATION_PATH,
-    periods_tab: ndarray = PARTIAL_PERIOD_TAB,
-    parameter_tab: ndarray = TEST_ALPHA_TAB,
+    test_path: Path = TEST_SOLID_EARTH_NUMERICAL_MODEL_PATH,
 ) -> None:
     """
     Generates a figure of 3 subplots as a function of degree and period, for h', l', and k'.
@@ -357,11 +359,12 @@ def compare_plot_semi_analytical_partials_to_finite_differences(
 
         models = DEFAULT_MODELS
 
-    love_numbers, love_number_partials = load_love_numbers_for_partials_plot(
+    test_path = test_path.joinpath(parameter)
+    periods_tab = array(object=load_base_model(name="periods_tab", path=test_path), dtype=float)
+    parameter_tab, love_numbers, love_number_partials = load_love_numbers_for_partials_plot(
         models=models,
         test_path=test_path,
         periods_tab=periods_tab,
-        parameter_tab=parameter_tab,
         parameter=parameter,
     )
     figure, axes = subplots(3, 2, figsize=(7, 12), sharex=True)
@@ -388,31 +391,23 @@ def test_compare_plot_semi_analytical_partials_to_finite_differences(
     compare_plot_semi_analytical_partials_to_finite_differences(
         models=models,
         parameter=r"\rho_0^{LOWER-MANTLE-1_0}",
-        test_path=TEST_RHO_PARTIAL_INTEGRATION_PATH,
-        periods_tab=ELASTIC_PERIOD_TAB,
-        parameter_tab=TEST_RHO_TAB,
     )
     compare_plot_semi_analytical_partials_to_finite_differences(
         models=models,
         parameter=r"\eta_m^{UPPER-MANTLE_0}",
-        test_path=TEST_ETA_PARTIAL_INTEGRATION_PATH,
-        periods_tab=ETA_PERIOD_TAB,
-        parameter_tab=TEST_ETA_TAB,
     )
     compare_plot_semi_analytical_partials_to_finite_differences(
-        models=models, parameter_tab=TEST_ALPHA_TAB
-    )
-    compare_plot_semi_analytical_partials_to_finite_differences(
-        parameter=r"\Delta^{MANTLE_0}",
-        test_path=TEST_DELTA_PARTIAL_INTEGRATION_PATH,
         models=models,
-        parameter_tab=TEST_DELTA_TAB,
+    )
+    compare_plot_semi_analytical_partials_to_finite_differences(
+        models=models,
+        parameter=r"\Delta^{MANTLE_0}",
     )
 
 
 def plot_interpolated_love_numbers_for_gins(
     love_numbers_to_plot: ndarray,
-    tau_values_to_plot: ndarray,
+    omega_m_values_to_plot: ndarray,
     love_numbers_for_gins_tabs: dict[str, ndarray],
     period: float,
     figsize: tuple[float, float],
@@ -422,9 +417,11 @@ def plot_interpolated_love_numbers_for_gins(
     """
 
     axes: Iterable[Axes]
-    figure, axes = subplots(len(tau_values_to_plot), 2, figsize=figsize, sharex=True, sharey=True)
+    figure, axes = subplots(
+        len(omega_m_values_to_plot), 2, figsize=figsize, sharex=True, sharey=True
+    )
 
-    for i_tau_m, (tau_m, ax_line) in enumerate(zip(tau_values_to_plot, axes)):
+    for i_tau_m, (omega_m, ax_line) in enumerate(zip(omega_m_values_to_plot, axes)):
 
         ax: Axes
 
@@ -471,14 +468,14 @@ def plot_interpolated_love_numbers_for_gins(
 
             ax.set_ylabel(r"$\Delta$")
             ax.set_xlabel(r"$\alpha$")
-            ax.set_title(side + r": \tau_m = " + f"{tau_m:.4f} s")
+            ax.set_title(side + r": \tau_m = " + f"{1/omega_m:.4f} s")
 
     return figure
 
 
 def plot_love_numbers_for_gins(
     love_numbers: ndarray,
-    tau_values_to_plot: ndarray,
+    omega_m_values_to_plot: ndarray,
     love_numbers_for_gins_tabs: dict[str, ndarray],
     period: float,
     figsize: tuple[float, float],
@@ -489,9 +486,9 @@ def plot_love_numbers_for_gins(
 
     love_numbers_to_plot = zeros(
         shape=(
-            len(love_numbers_for_gins_tabs["alpha"]),
-            len(love_numbers_for_gins_tabs["Delta"]),
-            len(love_numbers_for_gins_tabs["tau_m"]),
+            len(love_numbers_for_gins_tabs[r"\alpha^{MANTLE_0}"]),
+            len(love_numbers_for_gins_tabs[r"\Delta^{MANTLE_0}"]),
+            len(love_numbers_for_gins_tabs[r"\omega_{m-inf}^{MANTLE_0}"]),
         ),
         dtype=complex,
     )
@@ -506,7 +503,7 @@ def plot_love_numbers_for_gins(
 
             love_numbers_line: ndarray
             love_numbers_temp = zeros(
-                shape=(len(love_numbers_for_gins_tabs["tau_m"])), dtype=complex
+                shape=(len(love_numbers_for_gins_tabs[r"\omega_{m-inf}^{MANTLE_0}"])), dtype=complex
             )
 
             for i_tau_m, love_numbers_line in enumerate(love_numbers_array):
@@ -526,56 +523,71 @@ def plot_love_numbers_for_gins(
                 )
 
             love_numbers_to_plot[i_alpha, i_delta, :] = lagrange_order4(
-                x=log(love_numbers_for_gins_tabs["tau_m"]),
+                x=log(love_numbers_for_gins_tabs[r"\omega_{m-inf}^{MANTLE_0}"]),
                 y=array(object=love_numbers_temp.real, dtype=float),
-                new_x=log(tau_values_to_plot),
+                new_x=log(omega_m_values_to_plot),
             ) + 1j * lagrange_order4(
-                x=log(love_numbers_for_gins_tabs["tau_m"]),
+                x=log(love_numbers_for_gins_tabs[r"\omega_{m-inf}^{MANTLE_0}"]),
                 y=array(object=love_numbers_temp.imag, dtype=float),
-                new_x=log(tau_values_to_plot),
+                new_x=log(omega_m_values_to_plot),
             )
 
     figure = plot_interpolated_love_numbers_for_gins(
         love_numbers_to_plot=love_numbers_to_plot,
-        tau_values_to_plot=tau_values_to_plot,
+        omega_m_values_to_plot=omega_m_values_to_plot,
         love_numbers_for_gins_tabs=love_numbers_for_gins_tabs,
         period=period,
         figsize=figsize,
     )
-
     tight_layout()
 
     return figure
 
 
 def test_plot_k_2_love_numbers_for_gins(
-    path: Path = LOVE_NUMBERS_PATH.joinpath("for_gins"),
+    path: Path = TEST_SOLID_EARTH_NUMERICAL_MODEL_PATH,
     models: Optional[dict[str, str]] = None,
-    love_numbers_for_gins_tabs: Optional[dict[str, ndarray]] = None,
-    tau_values_to_plot: ndarray = LOVE_NUMBERS_FOR_GINS_TABS["tau_m"][3:-3],
+    n_parameter_values: int = 2,
+    tau_values_to_plot_step: int = 1,
     periods_values_to_plot: list[float] = list(PARTIAL_PERIOD_TAB) + [433 / 365, 100.0],
 ) -> None:
     """
     Shows the GINS-ready Love numbers in 2D (alpha, delta) for real and imaginary parts.
     """
 
-    if love_numbers_for_gins_tabs is None:
+    love_numbers_for_gins_tabs = parameters_for_gins(n_parameter_values=n_parameter_values)
 
-        love_numbers_for_gins_tabs = LOVE_NUMBERS_FOR_GINS_TABS
+    for parameter, tab in love_numbers_for_gins_tabs.items():
 
+        if len(tab) == 3:
+
+            start, stop, num = tab
+            love_numbers_for_gins_tabs[parameter] = linspace(start=start, stop=stop, num=num)
+
+        else:
+
+            start, stop, num, base = tab
+            love_numbers_for_gins_tabs[parameter] = logspace(
+                start=start, stop=stop, num=num, base=base
+            )
     if models is None:
 
         models = MODELS
 
-    elastic_love_numbers, love_numbers, _, _, _ = load_love_numbers_for_gins(
+    periods, elastic_love_numbers, love_numbers, _ = load_love_numbers_for_gins(
         path=path, models=models, love_numbers_for_gins_tabs=love_numbers_for_gins_tabs
     )  # (alpha, delta, tau_m, degrees, periods)
+    love_numbers_for_gins_tabs["periods"] = periods
+    tau_values_to_plot = love_numbers_for_gins_tabs[r"\omega_{m-inf}^{MANTLE_0}"][
+        ::tau_values_to_plot_step
+    ]
+    print(tau_values_to_plot)
 
     for period in periods_values_to_plot:
 
         figure = plot_love_numbers_for_gins(
             love_numbers=love_numbers / elastic_love_numbers[None, None, None, :, None],
-            tau_values_to_plot=tau_values_to_plot,
+            omega_m_values_to_plot=1 / array(object=tau_values_to_plot, dtype=float),
             love_numbers_for_gins_tabs=love_numbers_for_gins_tabs,
             period=period,
             figsize=(10, 5 * len(tau_values_to_plot)),

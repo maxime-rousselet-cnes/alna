@@ -373,7 +373,7 @@ def partials_per_parameter_integration_tests(
         multi_parameter_love_numbers_loop=MultiParametersLoop(
             periods=PARTIAL_PERIOD_TAB,
             parameters={
-                r"\Delta^{MANTLE_0}": (ALPHA_LOWER_BOUND, ALPHA_UPPER_BOUND, n_partial_tests)
+                r"\alpha^{MANTLE_0}": (ALPHA_LOWER_BOUND, ALPHA_UPPER_BOUND, n_partial_tests)
             },
             parameters_path=parameters_path,
             parameters_file_name=parameters_file_name,
