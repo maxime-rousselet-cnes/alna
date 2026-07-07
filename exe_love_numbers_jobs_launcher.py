@@ -22,14 +22,14 @@ from shlex import quote
 from subprocess import CalledProcessError, run
 from sys import executable
 
-from base_models import DATA_PATH, DEFAULT_WORKDIR
+from base_models import DEFAULT_WORKDIR
 
-from alna import DEFAULT_PARAMETER_LINES_PATH
+from alna import DEFAULT_PARAMETER_LINES_PATH, ROOT_PATH
 from exe_love_numbers_computing import parse_general_args
 
-DEFAULT_CLUSTER_VENV = DATA_PATH.parent.joinpath("alna_venv")
+DEFAULT_CLUSTER_VENV = ROOT_PATH.parent.joinpath("alna_venv")
 DEFAULT_CLUSTER_PYTHON_MODULE = "python/3.11.10"
-DEFAULT_SINGLE_JOB_SCRIPT = "exe_love_numbers_computing.py"
+DEFAULT_SINGLE_JOB_SCRIPT = str(ROOT_PATH.joinpath("exe_love_numbers_computing.py").resolve())
 LAUNCHER_PATH = Path(__file__).resolve()
 
 
@@ -98,12 +98,12 @@ def append_common_cli_args(cmd: list[str], args: Namespace) -> None:
 
     if args.path:
 
-        path: Path = args.path
+        path: Path = Path(args.path)
         cmd.extend(["--path", str(path.resolve())])
 
     if args.output_path:
 
-        output_path: Path = args.output_path
+        output_path: Path = Path(args.output_path)
         cmd.extend(["--output_path", str(output_path.resolve())])
 
     if args.period_tab_per_degree:
@@ -112,7 +112,7 @@ def append_common_cli_args(cmd: list[str], args: Namespace) -> None:
 
     if args.period_tab_per_degree_path:
 
-        period_tab_per_degree_path: Path = args.period_tab_per_degree_path
+        period_tab_per_degree_path: Path = Path(args.period_tab_per_degree_path)
         cmd.extend(["--period_tab_per_degree_path", str(period_tab_per_degree_path.resolve())])
 
     if args.force_transient:
@@ -261,7 +261,7 @@ def make_slurm_script(args: Namespace, workdir: Path = DEFAULT_WORKDIR) -> Path:
     slurm_file.parent.mkdir(parents=True, exist_ok=True)
 
     logs_dir = workdir.joinpath("logs")
-    parameter_lines_path: Path = args.parameter_lines_path
+    parameter_lines_path: Path = Path(args.parameter_lines_path)
 
     preamble = f"""#!/bin/bash
 
@@ -297,7 +297,7 @@ source {quote(str(Path(args.venv) / "bin" / "activate"))}
 
     worker_cmd = [
         executable,
-        str(LAUNCHER_PATH.resolve()),
+        str(LAUNCHER_PATH),
         "worker",
         "--name",
         str(args.name),

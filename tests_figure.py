@@ -561,15 +561,14 @@ def test_plot_k_2_love_numbers_for_gins(
 
         if len(tab) == 3:
 
-            start, stop, num = tab
-            love_numbers_for_gins_tabs[parameter] = linspace(start=start, stop=stop, num=num)
+            love_numbers_for_gins_tabs[parameter] = linspace(start=tab[0], stop=tab[1], num=tab[2])
 
         else:
 
-            start, stop, num, base = tab
             love_numbers_for_gins_tabs[parameter] = logspace(
-                start=start, stop=stop, num=num, base=base
+                start=tab[0], stop=tab[1], num=tab[2], base=tab[3]
             )
+
     if models is None:
 
         models = MODELS
@@ -578,19 +577,19 @@ def test_plot_k_2_love_numbers_for_gins(
         path=path, models=models, love_numbers_for_gins_tabs=love_numbers_for_gins_tabs
     )  # (alpha, delta, tau_m, degrees, periods)
     love_numbers_for_gins_tabs["periods"] = periods
-    tau_values_to_plot = love_numbers_for_gins_tabs[r"\omega_{m-inf}^{MANTLE_0}"][
+    omega_m_values_to_plot = love_numbers_for_gins_tabs[r"\omega_{m-inf}^{MANTLE_0}"][
         ::tau_values_to_plot_step
     ]
-    print(tau_values_to_plot)
+    print(omega_m_values_to_plot)
 
     for period in periods_values_to_plot:
 
         figure = plot_love_numbers_for_gins(
             love_numbers=love_numbers / elastic_love_numbers[None, None, None, :, None],
-            omega_m_values_to_plot=1 / array(object=tau_values_to_plot, dtype=float),
+            omega_m_values_to_plot=array(object=omega_m_values_to_plot, dtype=float),
             love_numbers_for_gins_tabs=love_numbers_for_gins_tabs,
             period=period,
-            figsize=(10, 5 * len(tau_values_to_plot)),
+            figsize=(10, 5 * len(omega_m_values_to_plot)),
         )
         save_figure(
             figure=figure,

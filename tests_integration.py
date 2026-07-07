@@ -4,7 +4,6 @@ Tests the consistency of integration. To test via pytest integration_tests.py.
 
 from argparse import ArgumentParser, Namespace
 from pathlib import Path
-from sys import executable
 from typing import Optional
 
 from base_models import DEFAULT_MODELS, MODELS, SolidEarthModelPart, load_base_model
@@ -111,7 +110,7 @@ def test_integrate_partials_per_parameter(test_config: Config) -> None:
 
 
 def test_compute_love_numbers_for_gins(
-    test_config: Config,
+    test_config: Config | dict[str, int | bool],
     degrees: Optional[list[int]] = None,
     models: Optional[dict[str, str]] = None,
 ) -> None:
@@ -162,9 +161,11 @@ if __name__ == "__main__":
 
     args = parse_args()
     test_compute_love_numbers_for_gins(
-        local_mode=args.local_mode,
-        n_parameter_values=args.n_parameter_values,
-        n_periods=args.n_periods,
+        test_config={
+            "local_mode": args.local_mode,
+            "n_parameter_values": args.n_parameter_values,
+            "n_periods": args.n_periods,
+        },
         degrees=[2],
         models=MODELS,
     )

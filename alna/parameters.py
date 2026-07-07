@@ -315,7 +315,7 @@ def launch_love_numbers_computing(
     run(
         args=[
             executable,
-            ROOT_PATH.joinpath("exe_love_numbers_jobs_launcher.py").resolve(),
+            str(ROOT_PATH.joinpath("exe_love_numbers_jobs_launcher.py").resolve()),
             "local" if local_mode else "submit",
             "--name",
             love_numbers_launcher.name,
@@ -333,6 +333,6 @@ def launch_love_numbers_computing(
             str(love_numbers_launcher.parameter_lines_path.resolve()),
         ]
         + (base_command if base_command else []),
-        cwd=DEFAULT_WORKDIR.resolve(),
+        cwd=str(DEFAULT_WORKDIR.resolve()),
         check=True,
     )
