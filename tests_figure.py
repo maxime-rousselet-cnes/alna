@@ -8,16 +8,12 @@ from typing import Iterable, Optional
 from base_models import (
     DEFAULT_MODELS,
     LOVE_NUMBERS_PATH,
-    TEST_ALPHA_TAB,
-    TEST_DELTA_TAB,
-    TEST_ETA_TAB,
     TEST_FIGURES_PATH,
-    TEST_RHO_TAB,
-    TEST_VISCOUS_PERIOD_TAB,
     BoundaryCondition,
     Direction,
     SolidEarthModelPart,
     lagrange_order4,
+    load_base_model,
 )
 from matplotlib.axes import Axes
 from matplotlib.colors import SymLogNorm
@@ -29,28 +25,18 @@ from numpy import array, atan2, diff, log, log10, meshgrid, ndarray, pi, zeros
 from alna import (
     COMPLEX_PARTS,
     DEFAULT_REFERENCE_LOVE_NUMBERS_PATH,
-    LOVE_NUMBERS_FOR_GINS_TABS,
     MODELS,
     SOLID_EARTH_NUMERICAL_MODEL_PART_NAMES_SEPARATOR,
+    TEST_ELASTIC_INTEGRATION_PATH,
+    TEST_SOLID_EARTH_NUMERICAL_MODEL_PATH,
     ComponentParameters,
     build_base_name,
     compose_name_with_invertible_parameters,
     format_name_function,
     load_love_numbers_for_gins,
+    load_reference_love_numbers_for_validation,
     load_solid_earth_numerical_model,
     save_figure,
-)
-from tests_integration import (
-    ELASTIC_PERIOD_TAB,
-    ETA_PERIOD_TAB,
-    PARTIAL_PERIOD_TAB,
-    TEST_ALPHA_PARTIAL_INTEGRATION_PATH,
-    TEST_DELTA_PARTIAL_INTEGRATION_PATH,
-    TEST_ELASTIC_INTEGRATION_PATH,
-    TEST_ETA_PARTIAL_INTEGRATION_PATH,
-    TEST_RHO_PARTIAL_INTEGRATION_PATH,
-    TEST_VISCOUS_INTEGRATION_PATH,
-    load_reference_love_numbers_for_validation,
 )
 
 
@@ -186,9 +172,14 @@ def sub_function_compare_plot_viscous_to_elastic(
 def test_compare_plot_viscous_to_elastic(
     models: Optional[dict[str, str]] = None,
     elastic_test_path: Path = TEST_ELASTIC_INTEGRATION_PATH,
-    test_path: Path = TEST_VISCOUS_INTEGRATION_PATH,
+    test_path: Path = TEST_SOLID_EARTH_NUMERICAL_MODEL_PATH.joinpath("viscous"),
     path: Path = TEST_FIGURES_PATH,
-    period_tab: ndarray = TEST_VISCOUS_PERIOD_TAB,
+    period_tab: ndarray = array(
+        object=load_base_model(
+            name="periods_tab", path=TEST_SOLID_EARTH_NUMERICAL_MODEL_PATH.joinpath("viscous")
+        ),
+        dtype=float,
+    ),
 ) -> None:
     """
     Generates a figure of 3 subplots as a function of degree and period, for h', l', and k'.

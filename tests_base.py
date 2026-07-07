@@ -3,54 +3,28 @@ All base functionalities. To test via pytest base_tests.py.
 """
 
 from pathlib import Path
-from shutil import rmtree
 from typing import Optional
 
-from base_models import (
-    DEFAULT_MODELS,
-    LOCAL_MODE,
-    TEST_PATH,
-    SolidEarthModelPart,
-    load_base_model,
-    save_base_model,
-)
-from numpy import array, ndarray
+from base_models import DEFAULT_MODELS, SolidEarthModelPart, load_base_model, save_base_model
+from numpy import ndarray
 
 from alna import (
-    COMPLEX_PARTS,
+    ELASTIC_PERIOD_TAB,
+    PARTIAL_PERIOD_TAB,
+    TEST_PARAMETERS_FILE_PATH,
+    TEST_PARAMETERS_SAVE_PATH,
+    TEST_SOLID_EARTH_MODEL_PROFILE_DESCRIPTIONS_PATH,
     TEST_SOLID_EARTH_NUMERICAL_MODEL_PATH,
     LoveNumbersLauncher,
     SolidEarthModelDescription,
     SolidEarthNumericalModel,
     SolidEarthParameters,
     build_base_name,
+    initialize_test,
     launch_love_numbers_computing,
     load_solid_earth_numerical_model,
+    verify_solid_earth_numerical_model_consistency,
 )
-from exe_love_numbers_computing import ELASTIC_PERIOD_TAB
-
-TEST_SOLID_EARTH_MODEL_PROFILE_DESCRIPTIONS_PATH = TEST_PATH.joinpath(
-    "solid_earth_model_profile_descriptions"
-)
-TEST_PARAMETERS_FILE_PATH = Path(".")
-TEST_PARAMETERS_SAVE_PATH = TEST_PATH.joinpath("solid_earth_parameters")
-PARTIAL_PERIOD_TAB = array(object=[1.0, 9.3, 18.6])  # (yr).
-
-
-def initialize_test(models: Optional[dict[str, str]], test_path: Path) -> dict[str, str]:
-    """
-    Heavy tests always starts by this initialization.
-    """
-
-    if models is None:
-
-        models = DEFAULT_MODELS
-
-    if test_path.exists():
-
-        rmtree(path=test_path)
-
-    return models
 
 
 def test_load_solid_earth_model_profile_descriptions(
@@ -102,65 +76,6 @@ def test_load_solid_earth_parameters(
     )
 
     assert parameters.__dict__ == reloaded_parameters.__dict__
-
-
-def verify_solid_earth_numerical_model_consistency(
-    model_1: SolidEarthNumericalModel, model_2: SolidEarthNumericalModel
-) -> None:
-    """
-    Verifies the consistency in attributes down to symbols.
-    """
-
-    assert model_1.name == model_2.name
-    assert model_1.solid_earth_parameters == model_2.solid_earth_parameters
-    assert model_1.units == model_2.units
-    # Does not verify consistency on expressions.
-    assert len(model_1.layer_models) == len(model_2.layer_models)
-
-    for layer_model, reloaded_layer_model in zip(model_1.layer_models, model_2.layer_models):
-
-        layer_model.propagator = None
-        reloaded_layer_model.propagator = None
-        layer_model.partial_propagators = None
-        reloaded_layer_model.partial_propagators = None
-        assert layer_model.__dict__ == reloaded_layer_model.__dict__
-
-    if model_1.love_numbers or model_2.love_numbers:
-
-        for part in COMPLEX_PARTS:
-
-            assert model_1.love_numbers[part].keys() == model_2.love_numbers[part].keys()
-
-            for love_numbers_1, love_numbers_2 in zip(
-                model_1.love_numbers[part].values(), model_2.love_numbers[part].values()
-            ):
-
-                assert sum(array(object=abs(love_numbers_1 - love_numbers_2)).flatten()) == 0.0
-
-            assert (
-                model_1.love_number_partials[part].keys()
-                == model_2.love_number_partials[part].keys()
-            )
-
-            for partials_1, partials_2 in zip(
-                model_1.love_number_partials[part].values(),
-                model_2.love_number_partials[part].values(),
-            ):
-
-                assert partials_1.keys() == partials_2.keys()
-
-                for love_number_partials_1, love_number_partials_2 in zip(
-                    partials_1.values(), partials_2.values()
-                ):
-
-                    assert (
-                        sum(
-                            array(
-                                object=abs(love_number_partials_1 - love_number_partials_2)
-                            ).flatten()
-                        )
-                        == 0.0
-                    )
 
 
 def test_load_solid_earth_numerical_model(
@@ -278,12 +193,12 @@ def test_check_anelastic_settings(
                 )
                 solid_earth_numerical_model.solid_earth_parameters = parameters
                 solid_earth_numerical_model.name = initial_name
-                solid_earth_numerical_model.save(path=test_path)
+                solid_earth_numerical_model.save(path=test_path.parent)
                 launch_love_numbers_computing(
                     period_tab_per_degree={2: periods_tab},
                     local_mode=True,
                     love_numbers_launcher=LoveNumbersLauncher(
-                        name=initial_name, output_path=test_path
+                        name=initial_name, path=test_path.parent, output_path=test_path
                     ),
                     base_command=["--not_compute_partials"],
                 )
@@ -302,7 +217,7 @@ def test_partials(
     models = initialize_test(models=models, test_path=test_path)
     launch_love_numbers_computing(
         period_tab_per_degree={2: periods_tab},
-        local_mode=LOCAL_MODE,
+        local_mode=True,
         parameters={r"\alpha^{MANTLE_0}": [0.2, 0.3], r"\eta_m^{UPPER-MANTLE_0}": [3e20, 3e21]},
         love_numbers_launcher=LoveNumbersLauncher(
             name=build_base_name(models=models),

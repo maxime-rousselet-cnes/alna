@@ -8,16 +8,15 @@ from pathlib import Path
 from typing import Optional
 
 from base_models import load_base_model
-from numpy import array, ndarray
+from numpy import ndarray
 
 from alna import (
     DEFAULT_PERIOD_TAB_PER_DEGREE_FILE_NAME,
     DEFAULT_PERIOD_TAB_PER_DEGREE_PATH,
+    ELASTIC_PERIOD_TAB,
     SOLID_EARTH_NUMERICAL_MODELS_PATH,
     load_solid_earth_numerical_model,
 )
-
-ELASTIC_PERIOD_TAB = array(object=[1.0], dtype=float)  # (yr).
 
 
 def parse_parameter_values(items: list[str] | None) -> dict[str, float]:

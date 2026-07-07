@@ -4,7 +4,7 @@ Numerical constants.
 
 from pathlib import Path
 
-from base_models import DATA_PATH, SOLID_EARTH_MODEL_PROFILES, TEST_FIGURES_PATH, TEST_PATH
+from base_models import SOLID_EARTH_MODEL_PROFILES, TEST_FIGURES_PATH, TEST_PATH
 from matplotlib.figure import Figure
 from numpy import arange, array, asarray, concatenate, exp, ndarray, pi
 from numpy.polynomial.laguerre import laggauss
@@ -14,10 +14,13 @@ N_GAUSS_LAGUERRE = 64
 N_LERCH_SERIES = 50
 T_GAUSS_LAGUERRE, W_GAUSS_LAGUERRE = laggauss(deg=N_GAUSS_LAGUERRE)
 
+ROOT_PATH = Path("../alna")
+
 ### Solid Earth model descriptions.
-SOLID_EARTH_MODEL_PROFILE_DESCRIPTIONS_ROOT_PATH = Path("../alna").joinpath(
+SOLID_EARTH_MODEL_PROFILE_DESCRIPTIONS_ROOT_PATH = ROOT_PATH.joinpath(
     "solid_earth_model_profile_descriptions"
 )
+DEFAULT_PARAMETERS_NAME = "parameters"
 SOLID_EARTH_MODEL_PROFILE_DESCRIPTIONS_PATH: dict[str, Path] = {
     model_part: SOLID_EARTH_MODEL_PROFILE_DESCRIPTIONS_ROOT_PATH.joinpath(model_part)
     for model_part in SOLID_EARTH_MODEL_PROFILES
@@ -39,6 +42,14 @@ DEFAULT_PERIOD_TAB_PER_DEGREE_FILE_NAME = "period_tab_per_degree"
 DEFAULT_PERIOD_TAB_PER_DEGREE_PATH = TEST_PATH.joinpath("period_tab_per_degree")
 DEFAULT_PARAMETER_LINES_FILE_NAME = "parameter_lines.jsonl"
 DEFAULT_PARAMETER_LINES_PATH = TEST_PATH.joinpath("parameter_lines")
+TEST_SOLID_EARTH_MODEL_PROFILE_DESCRIPTIONS_PATH = TEST_PATH.joinpath(
+    "solid_earth_model_profile_descriptions"
+)
+TEST_PARAMETERS_FILE_PATH = Path(".")
+TEST_PARAMETERS_SAVE_PATH = TEST_PATH.joinpath("solid_earth_parameters")
+PARTIAL_PERIOD_TAB = array(object=[1.0, 9.3, 18.6])  # (yr).
+ELASTIC_PERIOD_TAB = array(object=[1.0], dtype=float)  # (yr).
+
 
 # Universal Gravitationnal constant (m^3.kg^-1.s^-2).
 G = 6.67430e-11
@@ -46,7 +57,6 @@ G = 6.67430e-11
 # s.y^-1
 SECONDS_PER_YEAR = 365.25 * 86400
 COMPLEX_PARTS = ["real", "imag"]
-
 
 # For integration.
 INITIAL_Y_I = (

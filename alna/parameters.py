@@ -227,7 +227,7 @@ def build_base_name(models: dict[str, str]) -> str:
 
 def generate_parameter_lines(
     parameters: Optional[
-        dict[str, list[str] | tuple[float, float, float] | tuple[float, float, float, float]]
+        dict[str, list[float] | tuple[float, float, int] | tuple[float, float, int, float]]
     ] = None,
     parameter_lines_file_name: str = DEFAULT_PARAMETER_LINES_FILE_NAME,
     parameter_lines_path: Path = DEFAULT_PARAMETER_LINES_PATH,
@@ -258,12 +258,12 @@ def generate_parameter_lines(
         elif len(parameter_values) == 3:
 
             start, stop, num = parameter_values
-            all_parameter_values.append(linspace(start=start, stop=stop, num=num))
+            all_parameter_values.append(linspace(start=start, stop=stop, num=int(num)))
 
         else:
 
             start, stop, num, base = parameter_values
-            all_parameter_values.append(logspace(start=start, stop=stop, num=num, base=base))
+            all_parameter_values.append(logspace(start=start, stop=stop, num=int(num), base=base))
 
     with output.open("w", encoding="utf-8") as f:
 
@@ -291,7 +291,7 @@ def launch_love_numbers_computing(
     period_tab_per_degree: dict[int, ndarray],
     local_mode: bool = False,
     parameters: Optional[
-        dict[str, list[str] | tuple[float, float, float] | tuple[float, float, float, float]]
+        dict[str, list[float] | tuple[float, float, int] | tuple[float, float, int, float]]
     ] = None,
     love_numbers_launcher: LoveNumbersLauncher = LoveNumbersLauncher(),
     base_command: Optional[list[str]] = None,
