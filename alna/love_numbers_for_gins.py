@@ -59,7 +59,7 @@ def parameters_for_gins(
 
 
 def compute_love_numbers_for_gins(
-    local_mode: bool = True,
+    account: str = "",
     n_parameter_values: int = 2,
     n_periods: int = 2,
     degrees: Optional[list[int] | ndarray] = None,
@@ -75,7 +75,7 @@ def compute_love_numbers_for_gins(
         models = MODELS
 
     multi_parameter_integration(
-        local_mode=local_mode,
+        account=account,
         multi_parameter_love_numbers_loop=MultiParametersLoop(
             degrees=degrees if degrees else [2],
             periods=logspace(

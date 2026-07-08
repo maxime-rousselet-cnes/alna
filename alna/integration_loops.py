@@ -176,7 +176,7 @@ def load_reference_love_numbers_for_validation(path: Path) -> tuple[list[int], n
 
 
 def viscous_model_integration_test(
-    local_mode: bool = True,
+    account: str = "",
     n_periods: int = 2,
     models: Optional[dict[str, str]] = None,
     elastic_test_path: Path = TEST_ELASTIC_INTEGRATION_PATH,
@@ -205,7 +205,7 @@ def viscous_model_integration_test(
             degree: periods_tab
             for degree in solid_earth_numerical_model.love_numbers["real"].keys()
         },
-        local_mode=local_mode,
+        account=account,
         love_numbers_launcher=LoveNumbersLauncher(
             name=solid_earth_numerical_model.name,
             path=viscous_integration_test_path,
@@ -252,7 +252,7 @@ class MultiParametersLoop(BaseModel):
 
 
 def multi_parameter_integration(
-    local_mode: bool = True,
+    account: str = "",
     multi_parameter_love_numbers_loop: MultiParametersLoop = MultiParametersLoop(),
     base_command: Optional[list[str]] = None,
     models: Optional[dict[str, str]] = None,
@@ -294,7 +294,7 @@ def multi_parameter_integration(
             degree: multi_parameter_love_numbers_loop.periods
             for degree in multi_parameter_love_numbers_loop.degrees
         },
-        local_mode=local_mode,
+        account=account,
         parameters=multi_parameter_love_numbers_loop.parameters,
         love_numbers_launcher=LoveNumbersLauncher(
             name=solid_earth_numerical_model.name,
@@ -308,7 +308,7 @@ def multi_parameter_integration(
 
 
 def partial_integration_test_per_parameter(
-    local_mode: bool = True,
+    account: str = "",
     base_command: Optional[list[str]] = None,
     periods: ndarray = PARTIAL_PERIOD_TAB,
     models: Optional[dict[str, str]] = None,
@@ -325,7 +325,7 @@ def partial_integration_test_per_parameter(
     )
     multi_parameter_love_numbers_loop.set_periods(periods=periods)
     multi_parameter_integration(
-        local_mode=local_mode,
+        account=account,
         multi_parameter_love_numbers_loop=multi_parameter_love_numbers_loop,
         base_command=base_command,
         models=models,
@@ -333,7 +333,7 @@ def partial_integration_test_per_parameter(
 
 
 def partials_per_parameter_integration_tests(
-    local_mode: bool = True,
+    account: str = "",
     n_partial_tests: int = 2,
     path: Path = TEST_SOLID_EARTH_NUMERICAL_MODEL_PATH,
     parameters_path: Path = ROOT_PATH,
@@ -346,7 +346,7 @@ def partials_per_parameter_integration_tests(
     """
 
     partial_integration_test_per_parameter(
-        local_mode=local_mode,
+        account=account,
         base_command=["--compute_partials", "--force_not_transient", "--force_not_viscous"],
         multi_parameter_love_numbers_loop=MultiParametersLoop(
             periods=ELASTIC_PERIOD_TAB,
@@ -357,7 +357,7 @@ def partials_per_parameter_integration_tests(
         ),
     )
     partial_integration_test_per_parameter(
-        local_mode=local_mode,
+        account=account,
         base_command=["--compute_partials", "--force_not_transient", "--force_viscous"],
         multi_parameter_love_numbers_loop=MultiParametersLoop(
             periods=PARTIAL_PERIOD_TAB,
@@ -368,7 +368,7 @@ def partials_per_parameter_integration_tests(
         ),
     )
     partial_integration_test_per_parameter(
-        local_mode=local_mode,
+        account=account,
         base_command=["--compute_partials", "--force_transient", "--force_not_viscous"],
         multi_parameter_love_numbers_loop=MultiParametersLoop(
             periods=PARTIAL_PERIOD_TAB,
@@ -381,7 +381,7 @@ def partials_per_parameter_integration_tests(
         ),
     )
     partial_integration_test_per_parameter(
-        local_mode=local_mode,
+        account=account,
         base_command=["--compute_partials", "--force_transient", "--force_not_viscous"],
         multi_parameter_love_numbers_loop=MultiParametersLoop(
             periods=PARTIAL_PERIOD_TAB,

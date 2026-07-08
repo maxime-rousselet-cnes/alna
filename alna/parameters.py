@@ -290,7 +290,7 @@ class LoveNumbersLauncher:
 
 def launch_love_numbers_computing(
     period_tab_per_degree: dict[int, ndarray],
-    local_mode: bool = False,
+    account: str = "",
     parameters: Optional[
         dict[str, list[float] | tuple[float, float, int] | tuple[float, float, int, float]]
     ] = None,
@@ -316,7 +316,7 @@ def launch_love_numbers_computing(
         args=[
             executable,
             str(ROOT_PATH.joinpath("exe_love_numbers_jobs_launcher.py").resolve()),
-            "local" if local_mode else "submit",
+            "submit" if account else "local",
             "--name",
             love_numbers_launcher.name,
             "--path",
@@ -332,6 +332,7 @@ def launch_love_numbers_computing(
             "--parameter_lines_path",
             str(love_numbers_launcher.parameter_lines_path.resolve()),
         ]
+        + (["--account", account] if account else [])
         + (base_command if base_command else []),
         cwd=str(DEFAULT_WORKDIR.resolve()),
         check=True,

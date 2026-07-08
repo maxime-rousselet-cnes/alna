@@ -94,7 +94,7 @@ def test_integrate_viscous(test_config: Config) -> None:
     """
 
     viscous_model_integration_test(
-        local_mode=test_config["local_mode"], n_periods=test_config["n_periods"]
+        account=test_config["account"], n_periods=test_config["n_periods"]
     )
 
 
@@ -105,7 +105,7 @@ def test_integrate_partials_per_parameter(test_config: Config) -> None:
     """
 
     partials_per_parameter_integration_tests(
-        local_mode=test_config["local_mode"], n_partial_tests=test_config["n_parameter_values"]
+        account=test_config["account"], n_partial_tests=test_config["n_parameter_values"]
     )
 
 
@@ -120,7 +120,7 @@ def test_compute_love_numbers_for_gins(
     """
 
     compute_love_numbers_for_gins(
-        local_mode=test_config["local_mode"],
+        account=test_config["account"],
         n_parameter_values=test_config["n_parameter_values"],
         n_periods=test_config["n_periods"],
         degrees=degrees if degrees else [2],
@@ -136,22 +136,23 @@ def parse_args() -> Namespace:
     parser = ArgumentParser()
 
     parser.add_argument(
-        "--local_mode",
-        action="store_true",
-        default=False,
-        help="Run tests in local mode.",
+        "--account",
+        action="store",
+        type=str,
+        help="Run tests in local mode if account=''.",
+        default="grgs",
     )
     parser.add_argument(
         "--n_parameter_values",
         type=int,
-        default=2,
         help="Number of parameter values to test for GINS-ready Love numbers.",
+        default=2,
     )
     parser.add_argument(
         "--n_periods",
         type=int,
-        default=2,
         help="Number of periods to integrate the Love numbers at.",
+        default=2,
     )
 
     return parser.parse_args()
@@ -162,7 +163,7 @@ if __name__ == "__main__":
     args = parse_args()
     test_compute_love_numbers_for_gins(
         test_config={
-            "local_mode": args.local_mode,
+            "account": args.account,
             "n_parameter_values": args.n_parameter_values,
             "n_periods": args.n_periods,
         },

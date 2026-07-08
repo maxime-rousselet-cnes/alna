@@ -338,7 +338,12 @@ def submit_slurm(args: Namespace, workdir: Path = DEFAULT_WORKDIR) -> None:
 
         array_spec += f"%{args.max_running}"
 
-    cmd = ["sbatch", f"--array={array_spec}", str(slurm_file.resolve())]
+    cmd = [
+        "sbatch",
+        f"--account={args.account}",
+        f"--array={array_spec}",
+        str(slurm_file.resolve()),
+    ]
     print("Submitting Slurm job array:")
     print(" ".join(quote(x) for x in cmd))
 
@@ -409,6 +414,7 @@ def add_common_mode_args(parser: ArgumentParser) -> None:
         help="Path to the target directory.",
         default=DEFAULT_PARAMETER_LINES_PATH,
     )
+    parser.add_argument("--account", help="Cluster account.", default="grgs")
 
 
 def parse_multi_job_args() -> Namespace:

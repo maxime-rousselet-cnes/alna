@@ -13,24 +13,25 @@ def pytest_addoption(parser: Namespace):
     """
 
     parser.addoption(
-        "--local_mode",
-        action="store_true",
-        default=False,
-        help="Run tests in local mode.",
+        "--account",
+        action="store",
+        type=str,
+        help="Run tests in local mode if account=''.",
+        default="grgs",
     )
     parser.addoption(
         "--n_periods",
         action="store",
         type=int,
-        default=2,
         help="Number of periods to use in tests_integration.py.",
+        default=2,
     )
     parser.addoption(
         "--n_parameter_values",
         action="store",
         type=int,
-        default=2,
         help="Number of parameter values to use in tests_integration.py.",
+        default=2,
     )
 
 
@@ -41,7 +42,7 @@ def test_config(request: FixtureRequest):
     """
 
     return {
-        "local_mode": request.config.getoption("--local_mode"),
+        "account": request.config.getoption("--account"),
         "n_periods": request.config.getoption("--n_periods"),
         "n_parameter_values": request.config.getoption("--n_parameter_values"),
     }

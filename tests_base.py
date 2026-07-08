@@ -196,7 +196,6 @@ def test_check_anelastic_settings(
                 solid_earth_numerical_model.save(path=test_path.parent)
                 launch_love_numbers_computing(
                     period_tab_per_degree={2: periods_tab},
-                    local_mode=True,
                     love_numbers_launcher=LoveNumbersLauncher(
                         name=initial_name, path=test_path.parent, output_path=test_path
                     ),
@@ -217,7 +216,6 @@ def test_partials(
     models = initialize_test(models=models, test_path=test_path)
     launch_love_numbers_computing(
         period_tab_per_degree={2: periods_tab},
-        local_mode=True,
         parameters={r"\alpha^{MANTLE_0}": [0.2, 0.3], r"\eta_m^{UPPER-MANTLE_0}": [3e20, 3e21]},
         love_numbers_launcher=LoveNumbersLauncher(
             name=build_base_name(models=models),
