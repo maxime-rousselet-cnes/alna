@@ -96,7 +96,7 @@ def load_love_numbers_for_gins(
     path: Path = SOLID_EARTH_NUMERICAL_MODELS_PATH,
     directory: str = DEFAULT_FOR_GINS_OUTPUT_DIRECTORY,
     love_numbers_for_gins_tabs: Optional[dict[str, ndarray]] = None,
-) -> tuple[ndarray, ndarray, ndarray, ndarray]:
+) -> tuple[ndarray, ndarray, ndarray, dict[str, ndarray]]:
     """
     Gets already computed Love numbers of interest and their derivatives with respect to alpha,
     log10(Delta) and log10(tau_m). Returns periods, Elastic Love numbers, Love numbers, and Love

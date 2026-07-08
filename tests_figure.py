@@ -593,7 +593,6 @@ def test_plot_k_2_love_numbers_for_gins(
     omega_m_values_to_plot = love_numbers_for_gins_tabs[r"\omega_{m-inf}^{MANTLE_0}"][
         ::tau_values_to_plot_step
     ]
-    print(omega_m_values_to_plot)
 
     for period in periods_values_to_plot:
 

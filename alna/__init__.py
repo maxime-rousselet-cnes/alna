@@ -12,6 +12,7 @@ from .constants import (
     ELASTIC_PERIOD_TAB,
     PARTIAL_PERIOD_TAB,
     ROOT_PATH,
+    SECONDS_PER_YEAR,
     SOLID_EARTH_NUMERICAL_MODEL_PART_NAMES_SEPARATOR,
     SOLID_EARTH_NUMERICAL_MODELS_PATH,
     TEST_ELASTIC_INTEGRATION_PATH,
@@ -24,6 +25,7 @@ from .constants import (
     save_figure,
 )
 from .integration_loops import (
+    DEFAULT_FOR_GINS_OUTPUT_DIRECTORY,
     NUMERICAL_TOLERANCE,
     initialize_test,
     load_reference_love_numbers_for_validation,
@@ -64,6 +66,7 @@ to_import = [
     ELASTIC_PERIOD_TAB,
     PARTIAL_PERIOD_TAB,
     ROOT_PATH,
+    SECONDS_PER_YEAR,
     SOLID_EARTH_NUMERICAL_MODEL_PART_NAMES_SEPARATOR,
     SOLID_EARTH_NUMERICAL_MODELS_PATH,
     TEST_ELASTIC_INTEGRATION_PATH,
@@ -74,6 +77,7 @@ to_import = [
     G,
     generate_degree_tab,
     save_figure,
+    DEFAULT_FOR_GINS_OUTPUT_DIRECTORY,
     NUMERICAL_TOLERANCE,
     initialize_test,
     load_reference_love_numbers_for_validation,
