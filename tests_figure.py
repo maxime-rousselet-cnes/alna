@@ -19,7 +19,20 @@ from matplotlib.colors import SymLogNorm
 from matplotlib.figure import Figure
 from matplotlib.pyplot import get_cmap, subplots, suptitle, tight_layout
 from matplotlib.ticker import StrMethodFormatter
-from numpy import array, atan2, diff, linspace, log, log10, logspace, meshgrid, ndarray, pi, zeros
+from numpy import (
+    array,
+    atan2,
+    diff,
+    divide,
+    linspace,
+    log,
+    log10,
+    logspace,
+    meshgrid,
+    ndarray,
+    pi,
+    zeros,
+)
 
 from alna import (
     COMPLEX_PARTS,
@@ -446,10 +459,10 @@ def plot_interpolated_love_numbers_for_gins(
                     * (1 if period > 10 else 365)
                 ),
                 extent=[
-                    love_numbers_for_gins_tabs["alpha"].min(),
-                    love_numbers_for_gins_tabs["alpha"].max(),
-                    love_numbers_for_gins_tabs["delta"].min(),
-                    love_numbers_for_gins_tabs["delta"].max(),
+                    love_numbers_for_gins_tabs[r"\alpha^{MANTLE_0}"].min(),
+                    love_numbers_for_gins_tabs[r"\alpha^{MANTLE_0}"].max(),
+                    love_numbers_for_gins_tabs[r"\Delta^{MANTLE_0}"].min(),
+                    love_numbers_for_gins_tabs[r"\Delta^{MANTLE_0}"].max(),
                 ],
                 origin="lower",
                 aspect="auto",
@@ -585,7 +598,12 @@ def test_plot_k_2_love_numbers_for_gins(
     for period in periods_values_to_plot:
 
         figure = plot_love_numbers_for_gins(
-            love_numbers=love_numbers / elastic_love_numbers[None, None, None, :, None],
+            love_numbers=divide(
+                love_numbers,
+                elastic_love_numbers[None, None, None, :, None],
+                out=zeros(shape=love_numbers.shape, dtype=complex),
+                where=elastic_love_numbers[None, None, None, :, None] != 0,
+            ),
             omega_m_values_to_plot=array(object=omega_m_values_to_plot, dtype=float),
             love_numbers_for_gins_tabs=love_numbers_for_gins_tabs,
             period=period,

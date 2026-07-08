@@ -210,9 +210,7 @@ def load_love_numbers_for_gins(
                         i_alpha, i_delta, i_tau_m, i_degree
                     ] = (
                         log(10)
-                        * love_numbers_for_gins_tabs[r"\Delta^{MANTLE_0}"][
-                            None, :, None, None, None
-                        ]
+                        * love_numbers_for_gins_tabs[r"\Delta^{MANTLE_0}"][i_delta]
                         * (
                             model.love_number_partials["real"][r"\Delta^{MANTLE_0}"][degree][
                                 :,
@@ -232,10 +230,7 @@ def load_love_numbers_for_gins(
                     ] = (
                         -log(10)
                         # Because of inverse change of variable.
-                        * love_numbers_for_gins_tabs[r"\omega_{m-inf}^{MANTLE_0}"][
-                            None, :, None, None, None
-                        ]
-                        ** (-3)
+                        * love_numbers_for_gins_tabs[r"\omega_{m-inf}^{MANTLE_0}"][i_tau_m] ** (-3)
                         * (
                             model.love_number_partials["real"][r"\omega_{m-inf}^{MANTLE_0}"][
                                 degree
@@ -255,20 +250,18 @@ def load_love_numbers_for_gins(
                         )
                     )
 
-    model = load_solid_earth_numerical_model(
-        name="PREM",
-        path=TEST_ELASTIC_INTEGRATION_PATH,
-    )
-
     return (
         periods,
         array(
             object=[
-                model.love_numbers["real"][degree][0][
+                load_solid_earth_numerical_model(
+                    name="PREM",
+                    path=TEST_ELASTIC_INTEGRATION_PATH,
+                ).love_numbers["real"][degree][0][
                     BoundaryCondition.POTENTIAL.value,
                     Direction.POTENTIAL.value,
                 ]
-                for degree in love_numbers_for_gins_tabs["degrees"]
+                for degree in model.love_numbers["real"].keys()
             ]
         ),
         love_numbers,

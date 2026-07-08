@@ -349,7 +349,28 @@ def submit_slurm(args: Namespace, workdir: Path = DEFAULT_WORKDIR) -> None:
 
         return
 
-    result = run(cmd, text=True, capture_output=True, check=True)
+    try:
+
+        result = run(cmd, text=True, capture_output=True, check=True)
+
+    except CalledProcessError as exc:
+
+        print("sbatch failed.")
+        print(f"Generated Slurm script: {slurm_file}")
+        print(f"Command: {' '.join(quote(str(x)) for x in cmd)}")
+
+        if exc.stdout:
+
+            print("sbatch stdout:")
+            print(exc.stdout.rstrip())
+
+        if exc.stderr:
+
+            print("sbatch stderr:")
+            print(exc.stderr.rstrip())
+
+        raise
+
     print("sbatch output:")
     print(result.stdout.strip())
     print(f"Generated Slurm script: {slurm_file}")
