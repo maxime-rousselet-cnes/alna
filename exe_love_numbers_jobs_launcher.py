@@ -259,9 +259,9 @@ def make_slurm_script(args: Namespace, workdir: Path = DEFAULT_WORKDIR) -> Path:
 
     slurm_file = Path(args.slurm_file).resolve()
     slurm_file.parent.mkdir(parents=True, exist_ok=True)
-
-    logs_dir = workdir.joinpath("logs")
+    logs_dir = workdir.joinpath("logs").resolve()
     parameter_lines_path: Path = Path(args.parameter_lines_path)
+    cluster_python = Path(args.venv).resolve() / "bin" / "python"
 
     preamble = f"""#!/bin/bash
 
@@ -269,8 +269,8 @@ def make_slurm_script(args: Namespace, workdir: Path = DEFAULT_WORKDIR) -> Path:
 #SBATCH --time={args.walltime}
 #SBATCH --mem={args.mem}
 #SBATCH --cpus-per-task={args.cpus_per_task}
-#SBATCH --output={quote(str(logs_dir))}/slurm_%A_%a.out
-#SBATCH --error={quote(str(logs_dir))}/slurm_%A_%a.err
+#SBATCH --output={logs_dir}/slurm_%A_%a.out
+#SBATCH --error={logs_dir}/slurm_%A_%a.err
 
 set -euo pipefail
 
@@ -296,7 +296,7 @@ source {quote(str(Path(args.venv) / "bin" / "activate"))}
 """
 
     worker_cmd = [
-        executable,
+        str(cluster_python),
         str(LAUNCHER_PATH),
         "worker",
         "--name",
