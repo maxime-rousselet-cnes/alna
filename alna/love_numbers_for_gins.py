@@ -25,6 +25,7 @@ from .parameters import (
     build_base_name,
     compose_name_with_invertible_parameters,
     format_name_function,
+    generate_parameter_lines,
 )
 
 LOG10_PERIOD_LOWER_BOUND = -2  # (yr).
@@ -109,7 +110,9 @@ def load_love_numbers_for_gins(
 
     if love_numbers_for_gins_tabs is None:
 
-        love_numbers_for_gins_tabs = parameters_for_gins(n_parameter_values=n_parameter_values)
+        love_numbers_for_gins_tabs = generate_parameter_lines(
+            parameters=parameters_for_gins(n_parameter_values=n_parameter_values), write=False
+        )
 
     periods = array(
         object=load_base_model(name="periods_tab", path=path.joinpath(directory)), dtype=float

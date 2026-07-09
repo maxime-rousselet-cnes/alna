@@ -232,7 +232,8 @@ def generate_parameter_lines(
     ] = None,
     parameter_lines_file_name: str = DEFAULT_PARAMETER_LINES_FILE_NAME,
     parameter_lines_path: Path = DEFAULT_PARAMETER_LINES_PATH,
-) -> None:
+    write: bool = True,
+) -> dict[str, ndarray]:
     """
     Generates a (.JSONL) file to be read by the parallel computing script. Each line is a model run
     with a specific set of parameters.
@@ -248,29 +249,35 @@ def generate_parameter_lines(
     parameter_lines_path.mkdir(exist_ok=True, parents=True)
     output = parameter_lines_path.joinpath(parameter_lines_file_name)
 
-    all_parameter_values = []
+    all_parameter_values = {}
 
-    for _, parameter_values in parameters.items():
+    for parameter, parameter_values in parameters.items():
 
         if isinstance(parameter_values, (list, ndarray)):
 
-            all_parameter_values.append(parameter_values)
+            all_parameter_values[parameter] = parameter_values
 
         elif len(parameter_values) == 3:
 
             start, stop, num = parameter_values
-            all_parameter_values.append(linspace(start=start, stop=stop, num=int(num)))
+            all_parameter_values[parameter] = linspace(start=start, stop=stop, num=int(num))
 
         else:
 
             start, stop, num, base = parameter_values
-            all_parameter_values.append(logspace(start=start, stop=stop, num=int(num), base=base))
+            all_parameter_values[parameter] = logspace(
+                start=start, stop=stop, num=int(num), base=base
+            )
 
-    with output.open("w", encoding="utf-8") as f:
+    if write:
 
-        for parameter_combination in product(*all_parameter_values):
+        with output.open("w", encoding="utf-8") as f:
 
-            f.write(dumps(dict(zip(parameters.keys(), parameter_combination))) + "\n")
+            for parameter_combination in product(*list(all_parameter_values.values())):
+
+                f.write(dumps(dict(zip(parameters.keys(), parameter_combination))) + "\n")
+
+    return all_parameter_values
 
 
 @dataclass

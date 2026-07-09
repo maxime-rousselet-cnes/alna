@@ -46,6 +46,7 @@ from alna import (
     build_base_name,
     compose_name_with_invertible_parameters,
     format_name_function,
+    generate_parameter_lines,
     load_love_numbers_for_gins,
     load_reference_love_numbers_for_validation,
     load_solid_earth_numerical_model,
@@ -568,7 +569,9 @@ def test_plot_k_2_love_numbers_for_gins(
     Shows the GINS-ready Love numbers in 2D (alpha, delta) for real and imaginary parts.
     """
 
-    love_numbers_for_gins_tabs = parameters_for_gins(n_parameter_values=n_parameter_values)
+    love_numbers_for_gins_tabs = generate_parameter_lines(
+        parameters=parameters_for_gins(n_parameter_values=n_parameter_values), write=False
+    )
 
     for parameter, tab in love_numbers_for_gins_tabs.items():
 
