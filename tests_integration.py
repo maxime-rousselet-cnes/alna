@@ -88,7 +88,7 @@ def test_integrate_elastic(
         )
 
 
-def _test_integrate_viscous(test_config: Config) -> None:
+def test_integrate_viscous(test_config: Config) -> None:
     """
     Integrates a model to benchmark in the Maxwell setting.
     """
