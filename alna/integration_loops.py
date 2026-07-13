@@ -5,6 +5,7 @@ Tests the consistency of integration. To test via pytest integration_tests.py.
 from pathlib import Path
 from shutil import rmtree
 from typing import Optional
+from uuid import uuid4
 
 from base_models import DEFAULT_MODELS, SolidEarthModelPart, load_base_model, save_base_model
 from numpy import array, logspace, ndarray, zeros
@@ -288,6 +289,7 @@ def multi_parameter_integration(
         ),
     )
     solid_earth_numerical_model.merge_all(models=models)
+    solid_earth_numerical_model.name = uuid4() + "_" + solid_earth_numerical_model.name
     solid_earth_numerical_model.save(path=multi_parameter_love_numbers_loop.path)
     launch_love_numbers_computing(
         period_tab_per_degree={

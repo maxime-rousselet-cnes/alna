@@ -468,6 +468,7 @@ def plot_interpolated_love_numbers_for_gins(
                 origin="lower",
                 aspect="auto",
             )
+            ax.set_yscale("log")
             cbar = figure.colorbar(ax.images[0], ax=ax, orientation="vertical")
             cbar.ax.yaxis.set_major_formatter(StrMethodFormatter("{x:g}"))
             cbar.set_label(
@@ -482,7 +483,7 @@ def plot_interpolated_love_numbers_for_gins(
 
             ax.set_ylabel(r"$\Delta$")
             ax.set_xlabel(r"$\alpha$")
-            ax.set_title(side + r": \tau_m = " + f"{1/omega_m:.4f} s")
+            ax.set_title(side + r": $\tau_m$ = " + f"{1/omega_m:.4f} s")
 
     return figure
 
@@ -562,7 +563,7 @@ def test_plot_k_2_love_numbers_for_gins(
     path: Path = TEST_SOLID_EARTH_NUMERICAL_MODEL_PATH,
     models: Optional[dict[str, str]] = None,
     n_parameter_values: int = 10,
-    tau_values_to_plot_step: int = 1,
+    tau_values_to_plot_step: int = 3,
     periods_values_to_plot: list[float] = list(PARTIAL_PERIOD_TAB) + [433 / 365, 100.0],
 ) -> None:
     """

@@ -139,7 +139,7 @@ def parse_args() -> Namespace:
         "--account",
         action="store",
         type=str,
-        help="Run tests in local mode if account=''.",
+        help="Run the integration in local mode if account=''.",
         default="grgs",
     )
     parser.add_argument(
