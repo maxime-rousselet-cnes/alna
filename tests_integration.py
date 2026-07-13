@@ -161,6 +161,8 @@ def parse_args() -> Namespace:
 if __name__ == "__main__":
 
     args = parse_args()
+    test_integrate_partials_per_parameter(test_config={"account": "grgs", "n_parameter_values": 30})
+    """
     main_compute_love_numbers_for_gins(
         test_config={
             "account": args.account,
@@ -170,3 +172,4 @@ if __name__ == "__main__":
         degrees=[2],
         models=MODELS,
     )
+    """

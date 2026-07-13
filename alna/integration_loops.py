@@ -295,6 +295,7 @@ def multi_parameter_integration(
         str(uuid4())[:uuid_length] + "_" + solid_earth_numerical_model.name
     )
     solid_earth_numerical_model.save(path=multi_parameter_love_numbers_loop.path)
+    print(parameters)
     launch_love_numbers_computing(
         period_tab_per_degree={
             degree: multi_parameter_love_numbers_loop.periods
