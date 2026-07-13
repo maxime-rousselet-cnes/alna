@@ -198,7 +198,7 @@ def viscous_model_integration_test(
         name=models[SolidEarthModelPart.ELASTIC.value], path=elastic_test_path
     )
     solid_earth_numerical_model.merge_all(models=models)
-    solid_earth_numerical_model.save(path=viscous_integration_test_path)
+    solid_earth_numerical_model.save(path=viscous_integration_test_path.parent)
     save_base_model(obj=periods_tab, name="periods_tab", path=viscous_integration_test_path)
     launch_love_numbers_computing(
         period_tab_per_degree={
@@ -208,7 +208,7 @@ def viscous_model_integration_test(
         account=account,
         love_numbers_launcher=LoveNumbersLauncher(
             name=solid_earth_numerical_model.name,
-            path=viscous_integration_test_path,
+            path=viscous_integration_test_path.parent,
             output_path=viscous_integration_test_path,
         ),
         base_command=["--not_compute_partials", "--force_viscous"],
