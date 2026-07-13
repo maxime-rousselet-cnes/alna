@@ -109,7 +109,7 @@ def test_integrate_partials_per_parameter(test_config: Config) -> None:
     )
 
 
-def compute_love_numbers_for_gins(
+def main_compute_love_numbers_for_gins(
     test_config: Config | dict[str, int | bool],
     degrees: Optional[list[int]] = None,
     models: Optional[dict[str, str]] = None,
@@ -161,7 +161,7 @@ def parse_args() -> Namespace:
 if __name__ == "__main__":
 
     args = parse_args()
-    compute_love_numbers_for_gins(
+    main_compute_love_numbers_for_gins(
         test_config={
             "account": args.account,
             "n_parameter_values": args.n_parameter_values,
