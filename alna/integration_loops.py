@@ -14,6 +14,7 @@ from pydantic import BaseModel, ConfigDict
 from .constants import (
     COMPLEX_PARTS,
     DEFAULT_PARAMETERS_NAME,
+    DEFAULT_UUID_LENGTH,
     ELASTIC_PERIOD_TAB,
     PARTIAL_PERIOD_TAB,
     ROOT_PATH,
@@ -257,6 +258,7 @@ def multi_parameter_integration(
     multi_parameter_love_numbers_loop: MultiParametersLoop = MultiParametersLoop(),
     base_command: Optional[list[str]] = None,
     models: Optional[dict[str, str]] = None,
+    uuid_length: int = DEFAULT_UUID_LENGTH,
 ) -> None:
     """
     Computes Love numbers of interest and their partial deriavtives for a range of candidate
@@ -289,7 +291,9 @@ def multi_parameter_integration(
         ),
     )
     solid_earth_numerical_model.merge_all(models=models)
-    solid_earth_numerical_model.name = uuid4() + "_" + solid_earth_numerical_model.name
+    solid_earth_numerical_model.name = (
+        str(uuid4())[:uuid_length] + "_" + solid_earth_numerical_model.name
+    )
     solid_earth_numerical_model.save(path=multi_parameter_love_numbers_loop.path)
     launch_love_numbers_computing(
         period_tab_per_degree={

@@ -13,6 +13,7 @@ from sympy import Expr, symbols
 N_GAUSS_LAGUERRE = 64
 N_LERCH_SERIES = 50
 T_GAUSS_LAGUERRE, W_GAUSS_LAGUERRE = laggauss(deg=N_GAUSS_LAGUERRE)
+DEFAULT_UUID_LENGTH = 10
 
 ROOT_PATH = Path("../alna").resolve()
 
