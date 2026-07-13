@@ -561,7 +561,7 @@ def plot_love_numbers_for_gins(
 def test_plot_k_2_love_numbers_for_gins(
     path: Path = TEST_SOLID_EARTH_NUMERICAL_MODEL_PATH,
     models: Optional[dict[str, str]] = None,
-    n_parameter_values: int = 2,
+    n_parameter_values: int = 10,
     tau_values_to_plot_step: int = 1,
     periods_values_to_plot: list[float] = list(PARTIAL_PERIOD_TAB) + [433 / 365, 100.0],
 ) -> None:
@@ -579,11 +579,15 @@ def test_plot_k_2_love_numbers_for_gins(
 
             love_numbers_for_gins_tabs[parameter] = linspace(start=tab[0], stop=tab[1], num=tab[2])
 
-        else:
+        elif len(tab) == 4:
 
             love_numbers_for_gins_tabs[parameter] = logspace(
                 start=tab[0], stop=tab[1], num=tab[2], base=tab[3]
             )
+
+        else:
+
+            love_numbers_for_gins_tabs[parameter] = tab
 
     if models is None:
 
