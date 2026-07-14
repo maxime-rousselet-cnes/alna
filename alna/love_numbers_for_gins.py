@@ -27,6 +27,7 @@ from .parameters import (
     format_name_function,
     generate_parameter_lines,
 )
+from .solid_earth_model import SolidEarthNumericalModel
 
 LOG10_PERIOD_LOWER_BOUND = -2  # (yr).
 LOG10_PERIOD_UPPER_BOUND = 4  # (yr).
@@ -92,7 +93,7 @@ def compute_love_numbers_for_gins(
 
 
 def load_love_numbers_for_gins(
-    n_parameter_values: int = 2,
+    dummy_variable: int | SolidEarthNumericalModel = 2,
     models: Optional[dict[str, str]] = None,
     path: Path = SOLID_EARTH_NUMERICAL_MODELS_PATH,
     directory: str = DEFAULT_FOR_GINS_OUTPUT_DIRECTORY,
@@ -111,7 +112,7 @@ def load_love_numbers_for_gins(
     if love_numbers_for_gins_tabs is None:
 
         love_numbers_for_gins_tabs = generate_parameter_lines(
-            parameters=parameters_for_gins(n_parameter_values=n_parameter_values), write=False
+            parameters=parameters_for_gins(n_parameter_values=dummy_variable), write=False
         )
 
     periods = array(
@@ -136,27 +137,28 @@ def load_love_numbers_for_gins(
 
             for i_tau_m in range(len(love_numbers_for_gins_tabs[r"\omega_{m-inf}^{MANTLE_0}"])):
 
-                model = load_solid_earth_numerical_model(
-                    name=compose_name_with_invertible_parameters(
-                        name=format_name_function(
-                            name=build_base_name(models=models),
-                            component_parameters=ComponentParameters(
-                                viscous_component=True,
-                                transient_component=True,
-                                bounded_attenuation_functions=True,
-                            ),
+                name = compose_name_with_invertible_parameters(
+                    name=format_name_function(
+                        name=build_base_name(models=models),
+                        component_parameters=ComponentParameters(
+                            viscous_component=True,
+                            transient_component=True,
+                            bounded_attenuation_functions=True,
                         ),
-                        parameters_to_invert=[
-                            r"\alpha^{MANTLE_0}",
-                            r"\Delta^{MANTLE_0}",
-                            r"\omega_{m-inf}^{MANTLE_0}",
-                        ],
-                        invertible_parameters_tab=[
-                            love_numbers_for_gins_tabs[r"\alpha^{MANTLE_0}"][i_alpha],
-                            love_numbers_for_gins_tabs[r"\Delta^{MANTLE_0}"][i_delta],
-                            love_numbers_for_gins_tabs[r"\omega_{m-inf}^{MANTLE_0}"][i_tau_m],
-                        ],
                     ),
+                    parameters_to_invert=[
+                        r"\alpha^{MANTLE_0}",
+                        r"\Delta^{MANTLE_0}",
+                        r"\omega_{m-inf}^{MANTLE_0}",
+                    ],
+                    invertible_parameters_tab=[
+                        love_numbers_for_gins_tabs[r"\alpha^{MANTLE_0}"][i_alpha],
+                        love_numbers_for_gins_tabs[r"\Delta^{MANTLE_0}"][i_delta],
+                        love_numbers_for_gins_tabs[r"\omega_{m-inf}^{MANTLE_0}"][i_tau_m],
+                    ],
+                )
+                dummy_variable = load_solid_earth_numerical_model(
+                    name=list(path.joinpath(directory).glob("*" + name + "*"))[0].name,
                     path=path.joinpath(directory),
                 )
 
@@ -164,7 +166,7 @@ def load_love_numbers_for_gins(
 
                     shape = tuple(
                         [len(tab) for tab in love_numbers_for_gins_tabs.values()]
-                        + [len(model.love_numbers["real"].keys())]
+                        + [len(dummy_variable.love_numbers["real"].keys())]
                         + list(shape)
                     )
                     love_numbers = zeros(
@@ -179,16 +181,16 @@ def load_love_numbers_for_gins(
                         for parameter in love_numbers_for_gins_tabs.keys()
                     }
 
-                for i_degree, degree in enumerate(model.love_numbers["real"].keys()):
+                for i_degree, degree in enumerate(dummy_variable.love_numbers["real"].keys()):
 
                     love_numbers[i_alpha, i_delta, i_tau_m, i_degree] = (
-                        model.love_numbers["real"][degree][
+                        dummy_variable.love_numbers["real"][degree][
                             :,
                             BoundaryCondition.POTENTIAL.value,
                             Direction.POTENTIAL.value,
                         ]
                         + 1j
-                        * model.love_numbers["imag"][degree][
+                        * dummy_variable.love_numbers["imag"][degree][
                             :,
                             BoundaryCondition.POTENTIAL.value,
                             Direction.POTENTIAL.value,
@@ -197,13 +199,13 @@ def load_love_numbers_for_gins(
                     love_number_partials[r"\alpha^{MANTLE_0}"][
                         i_alpha, i_delta, i_tau_m, i_degree
                     ] = (
-                        model.love_number_partials["real"][r"\alpha^{MANTLE_0}"][degree][
+                        dummy_variable.love_number_partials["real"][r"\alpha^{MANTLE_0}"][degree][
                             :,
                             BoundaryCondition.POTENTIAL.value,
                             Direction.POTENTIAL.value,
                         ]
                         + 1j
-                        * model.love_number_partials["imag"][r"\alpha^{MANTLE_0}"][degree][
+                        * dummy_variable.love_number_partials["imag"][r"\alpha^{MANTLE_0}"][degree][
                             :,
                             BoundaryCondition.POTENTIAL.value,
                             Direction.POTENTIAL.value,
@@ -215,13 +217,17 @@ def load_love_numbers_for_gins(
                         log(10)
                         * love_numbers_for_gins_tabs[r"\Delta^{MANTLE_0}"][i_delta]
                         * (
-                            model.love_number_partials["real"][r"\Delta^{MANTLE_0}"][degree][
+                            dummy_variable.love_number_partials["real"][r"\Delta^{MANTLE_0}"][
+                                degree
+                            ][
                                 :,
                                 BoundaryCondition.POTENTIAL.value,
                                 Direction.POTENTIAL.value,
                             ]
                             + 1j
-                            * model.love_number_partials["imag"][r"\Delta^{MANTLE_0}"][degree][
+                            * dummy_variable.love_number_partials["imag"][r"\Delta^{MANTLE_0}"][
+                                degree
+                            ][
                                 :,
                                 BoundaryCondition.POTENTIAL.value,
                                 Direction.POTENTIAL.value,
@@ -235,17 +241,17 @@ def load_love_numbers_for_gins(
                         # Because of inverse change of variable.
                         * love_numbers_for_gins_tabs[r"\omega_{m-inf}^{MANTLE_0}"][i_tau_m] ** (-3)
                         * (
-                            model.love_number_partials["real"][r"\omega_{m-inf}^{MANTLE_0}"][
-                                degree
-                            ][
+                            dummy_variable.love_number_partials["real"][
+                                r"\omega_{m-inf}^{MANTLE_0}"
+                            ][degree][
                                 :,
                                 BoundaryCondition.POTENTIAL.value,
                                 Direction.POTENTIAL.value,
                             ]
                             + 1j
-                            * model.love_number_partials["imag"][r"\omega_{m-inf}^{MANTLE_0}"][
-                                degree
-                            ][
+                            * dummy_variable.love_number_partials["imag"][
+                                r"\omega_{m-inf}^{MANTLE_0}"
+                            ][degree][
                                 :,
                                 BoundaryCondition.POTENTIAL.value,
                                 Direction.POTENTIAL.value,
@@ -264,7 +270,7 @@ def load_love_numbers_for_gins(
                     BoundaryCondition.POTENTIAL.value,
                     Direction.POTENTIAL.value,
                 ]
-                for degree in model.love_numbers["real"].keys()
+                for degree in dummy_variable.love_numbers["real"].keys()
             ]
         ),
         love_numbers,
