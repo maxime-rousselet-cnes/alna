@@ -431,14 +431,6 @@ def test_compare_plot_semi_analytical_partials_to_finite_differences(
     )
 
 
-def format_delta(log_delta: float, _: int) -> str:
-    """
-    To manage log axis in 2D color plot.
-    """
-
-    return f"{log_delta:g}"
-
-
 def plot_interpolated_love_numbers_for_gins(
     love_numbers_to_plot: ndarray,
     omega_m_values_to_plot: ndarray,
@@ -463,7 +455,7 @@ def plot_interpolated_love_numbers_for_gins(
 
             image = ax.pcolormesh(
                 love_numbers_for_gins_tabs[r"\alpha^{MANTLE_0}"],
-                love_numbers_for_gins_tabs[r"\Delta^{MANTLE_0}"],
+                love_numbers_for_gins_tabs[r"\log_{10}\Delta^{MANTLE_0}"],
                 (
                     (
                         love_numbers_to_plot[:, :, i_tau_m].real ** 2

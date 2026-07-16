@@ -239,7 +239,7 @@ def load_love_numbers_for_gins(
                     ] = (
                         -log(10)
                         # Because of inverse change of variable.
-                        * love_numbers_for_gins_tabs[r"\omega_{m-inf}^{MANTLE_0}"][i_tau_m] ** (-3)
+                        * love_numbers_for_gins_tabs[r"\omega_{m-inf}^{MANTLE_0}"][i_tau_m]
                         * (
                             dummy_variable.love_number_partials["real"][
                                 r"\omega_{m-inf}^{MANTLE_0}"
