@@ -182,7 +182,11 @@ def load_love_numbers_for_gins(
                             shape=shape,
                             dtype=complex,
                         )
-                        for parameter in love_numbers_for_gins_tabs.keys()
+                        for parameter in [
+                            r"\alpha^{MANTLE_0}",
+                            r"\log_{10}\Delta^{MANTLE_0}",
+                            r"\log_{10}\tau_{m-inf}^{MANTLE_0}",
+                        ]
                     }
 
                 for i_degree, degree in enumerate(dummy_variable.love_numbers["real"].keys()):
