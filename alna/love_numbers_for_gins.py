@@ -211,7 +211,7 @@ def load_love_numbers_for_gins(
                             Direction.POTENTIAL.value,
                         ]
                     )
-                    love_number_partials[r"\Delta^{MANTLE_0}"][
+                    love_number_partials[r"\log_{10}\Delta^{MANTLE_0}"][
                         i_alpha, i_delta, i_tau_m, i_degree
                     ] = (
                         log(10)
@@ -234,7 +234,7 @@ def load_love_numbers_for_gins(
                             ]
                         )
                     )
-                    love_number_partials[r"\omega_{m-inf}^{MANTLE_0}"][
+                    love_number_partials[r"\log_{10}\tau_{m-inf}^{MANTLE_0}"][
                         i_alpha, i_delta, i_tau_m, i_degree
                     ] = (
                         -log(10)
