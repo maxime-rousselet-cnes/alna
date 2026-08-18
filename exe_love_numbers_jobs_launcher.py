@@ -459,7 +459,7 @@ def parse_multi_job_args() -> Namespace:
 
 def main() -> None:
     """
-    Manages local/cluster runs and mandatory Slurmm modes.
+    Manages local/cluster runs and mandatory Slurm modes.
     """
 
     args = parse_multi_job_args()
