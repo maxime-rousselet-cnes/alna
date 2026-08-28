@@ -9,8 +9,8 @@
 
 In the parameter_lines file, each line is one run, for example:
 
-       {"\\alpha^{MANTLE_0}": 0.2, "Delta^{MANTLE_0}": 2.1}
-       {"\\alpha^{MANTLE_0}": 0.3, "Delta^{MANTLE_0}": 2.1}
+ {"\\alpha^{MANTLE_0}": 0.2, "\\Delta^{MANTLE_0}": 0.5, "\\omega_{m-inf}": 0.000309, "Q_\\mu": 300}
+ {"\\alpha^{MANTLE_0}": 0.3, "\\Delta^{MANTLE_0}": 0.5, "\\omega_{m-inf}": 0.000309, "Q_\\mu": 300}
 """
 
 from argparse import ArgumentParser, Namespace
@@ -437,8 +437,8 @@ def parse_multi_job_args() -> Namespace:
     add_common_mode_args(parser=submit_parser)
     submit_parser.add_argument("--job_name", default="alna_array")
     submit_parser.add_argument("--slurm_file", default="run_alna_array.sbatch")
-    submit_parser.add_argument("--walltime", default="04:00:00")
-    submit_parser.add_argument("--mem", default="4G")
+    submit_parser.add_argument("--walltime", default="08:00:00")
+    submit_parser.add_argument("--mem", default="8G")
     submit_parser.add_argument("--cpus_per_task", type=int, default=1)
     submit_parser.add_argument("--max_running", type=int, default=None)
     submit_parser.add_argument("--venv", default=DEFAULT_CLUSTER_VENV.resolve())

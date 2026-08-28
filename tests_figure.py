@@ -18,7 +18,7 @@ from matplotlib.axes import Axes
 from matplotlib.colors import SymLogNorm
 from matplotlib.figure import Figure
 from matplotlib.pyplot import get_cmap, subplots, suptitle, tight_layout
-from matplotlib.ticker import FuncFormatter, StrMethodFormatter
+from matplotlib.ticker import StrMethodFormatter
 from numpy import (
     array,
     atan2,
@@ -50,7 +50,6 @@ from alna import (
     load_love_numbers_for_gins,
     load_reference_love_numbers_for_validation,
     load_solid_earth_numerical_model,
-    parameters_for_gins,
     save_figure,
 )
 

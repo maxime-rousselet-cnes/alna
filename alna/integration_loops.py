@@ -34,11 +34,43 @@ NUMERICAL_TOLERANCE = 5e-5
 DEFAULT_LOG10_PERIODS_FOR_VISCOUS_INTEGRATION_TEST_LOWER_BOUND = -3
 DEFAULT_LOG10_PERIODS_FOR_VISCOUS_INTEGRATION_TEST_UPPER_BOUND = 5
 DEFAULT_BASE_COMMAND = ["--compute_partials", "--force_viscous", "--force_transient"]
-ALPHA_LOWER_BOUND = 0.1
-ALPHA_UPPER_BOUND = 0.4
-LOG10_DELTA_LOWER_BOUND = -2.0
-LOG10_DELTA_UPPER_BOUND = 1.0
 DEFAULT_FOR_GINS_OUTPUT_DIRECTORY = "for_gins"
+
+# Exponentiation base if 3-rd parameter is present.
+PARAMETERS_TO_INVERT_BOUNDS = {
+    r"\alpha^{MANTLE_0}": (0.05, 0.4),
+    r"Q_\mu^{MANTLE_0}": (200, 400),
+    r"\Delta^{MANTLE_0}": (
+        -2.0,  # Almost no transient amplitude: 0.01 times elastic.
+        1.0,  # 10 times the elastic amplitude.
+        10.0,
+    ),
+    r"\omega_{m-inf}^{MANTLE_0}": (
+        -5.0,  # 100 000 s ~ 1.157 d. Reference at ~ 3236 s.
+        -2.0,  # 100 s.
+        10.0,
+    ),
+}
+
+
+def build_parameter_tab_parametrization(
+    n_parameter_values: int = 2,
+    parameter_to_invert_bounds: dict[
+        str, tuple[float, float] | tuple[float, float, float]
+    ] = PARAMETERS_TO_INVERT_BOUNDS,
+) -> dict[str, tuple[float, float, int] | tuple[float, float, int, float]]:
+    """
+    Generates parameter linspace arguments or logspace arguments.
+    """
+
+    return {
+        parameter: (
+            (bounds[0], bounds[1], n_parameter_values)
+            if len(bounds) == 2
+            else (bounds[0], bounds[1], n_parameter_values, bounds[2])
+        )
+        for parameter, bounds in parameter_to_invert_bounds.items()
+    }
 
 
 def initialize_test(models: Optional[dict[str, str]], test_path: Path) -> dict[str, str]:
@@ -377,34 +409,19 @@ def partials_per_parameter_integration_tests(
             path=path,
         ),
     )
-    partial_integration_test_per_parameter(
-        account=account,
-        base_command=["--compute_partials", "--force_transient", "--force_not_viscous"],
-        multi_parameter_love_numbers_loop=MultiParametersLoop(
-            periods=PARTIAL_PERIOD_TAB,
-            parameters={
-                r"\alpha^{MANTLE_0}": (ALPHA_LOWER_BOUND, ALPHA_UPPER_BOUND, n_partial_tests)
-            },
-            parameters_path=parameters_path,
-            parameters_file_name=parameters_file_name,
-            path=path,
-        ),
-    )
-    partial_integration_test_per_parameter(
-        account=account,
-        base_command=["--compute_partials", "--force_transient", "--force_not_viscous"],
-        multi_parameter_love_numbers_loop=MultiParametersLoop(
-            periods=PARTIAL_PERIOD_TAB,
-            parameters={
-                r"\Delta^{MANTLE_0}": (
-                    LOG10_DELTA_LOWER_BOUND,
-                    LOG10_DELTA_UPPER_BOUND,
-                    n_partial_tests,
-                    10,
-                )
-            },
-            parameters_path=parameters_path,
-            parameters_file_name=parameters_file_name,
-            path=path,
-        ),
-    )
+
+    for parameter, parametrization in build_parameter_tab_parametrization(
+        n_parameter_values=n_partial_tests
+    ).items():
+
+        partial_integration_test_per_parameter(
+            account=account,
+            base_command=["--compute_partials", "--force_transient", "--force_not_viscous"],
+            multi_parameter_love_numbers_loop=MultiParametersLoop(
+                periods=PARTIAL_PERIOD_TAB,
+                parameters={parameter: parametrization},
+                parameters_path=parameters_path,
+                parameters_file_name=parameters_file_name,
+                path=path,
+            ),
+        )

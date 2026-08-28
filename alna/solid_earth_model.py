@@ -827,7 +827,7 @@ class SolidEarthModelDescription:
     #       - v_p: P wave velocity (m.s^-1).
     #       - \rho_0: Density (kg.m^-3).
     #   - for the attenuation part:
-    #       - q_\mu: Shear modulus attenuation coefficient Q (unitless).
+    #       - Q_\mu: Shear modulus attenuation coefficient Q (unitless).
     #   - for the transient part:
     #       - \omega_{m-inf}: (Hz).
     #       - \alpha: (Unitless).

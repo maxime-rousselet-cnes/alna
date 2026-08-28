@@ -219,7 +219,7 @@ def attenuation_function_computing(
                 period_unit=units[r"T"],
                 alpha=expressions[r"\alpha"],
                 delta=expressions[r"\Delta"],
-                q_mu=expressions[r"q_\mu"],
+                q_mu=expressions[r"Q_\mu"],
             ),
             period_unit=units[r"T"],
         )
@@ -244,7 +244,7 @@ def create_rheological_expressions(
 
         expressions[r"\mu"] = expressions[r"\mu_0"] + delta_mu_computing(
             mu_0=expressions[r"\mu_0"],
-            q_mu=expressions[r"q_\mu"],
+            q_mu=expressions[r"Q_\mu"],
             f_attenuation=attenuation_function_computing(
                 expressions=expressions,
                 units=units,

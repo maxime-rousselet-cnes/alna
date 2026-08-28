@@ -1,16 +1,21 @@
 {
     "layer_names": [
-        "MANTLE"
+        "MANTLE",
+        "CRUST"
     ],
     "r_limits": [
         3480000.0,
+        6271000.0,
         6371000.0
     ],
     "optional_crust_values": null,
     "polynomials": {
-        "q_\\mu": [
+        "Q_\\mu": [
             [
                 312
+            ],
+            [
+                600
             ]
         ]
     }
