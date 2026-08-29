@@ -440,7 +440,7 @@ def parse_multi_job_args() -> Namespace:
     submit_parser.add_argument("--walltime", default="08:00:00")
     submit_parser.add_argument("--mem", default="8G")
     submit_parser.add_argument("--cpus_per_task", type=int, default=1)
-    submit_parser.add_argument("--max_running", type=int, default=None)
+    submit_parser.add_argument("--max_running", type=int, default=1000)
     submit_parser.add_argument("--venv", default=DEFAULT_CLUSTER_VENV.resolve())
     submit_parser.add_argument("--python_module", default=DEFAULT_CLUSTER_PYTHON_MODULE)
     submit_parser.add_argument("--dry_run", action="store_true")

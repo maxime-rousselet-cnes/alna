@@ -232,7 +232,7 @@ def load_love_numbers_for_gins(
     # Finally performs the period to frequency flip.
     return (
         log_inverted_tabs,
-        log(1 / periods),
+        flip(log(1 / periods)),
         array(
             object=[
                 load_solid_earth_numerical_model(

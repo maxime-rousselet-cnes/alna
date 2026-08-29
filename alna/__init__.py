@@ -27,6 +27,7 @@ from .constants import (
 from .integration_loops import (
     DEFAULT_FOR_GINS_OUTPUT_DIRECTORY,
     NUMERICAL_TOLERANCE,
+    PARAMETERS_TO_INVERT_BOUNDS,
     initialize_test,
     load_reference_love_numbers_for_validation,
     partials_per_parameter_integration_tests,
@@ -74,6 +75,7 @@ to_import = [
     save_figure,
     DEFAULT_FOR_GINS_OUTPUT_DIRECTORY,
     NUMERICAL_TOLERANCE,
+    PARAMETERS_TO_INVERT_BOUNDS,
     initialize_test,
     load_reference_love_numbers_for_validation,
     partials_per_parameter_integration_tests,
