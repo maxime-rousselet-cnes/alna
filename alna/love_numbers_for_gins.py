@@ -72,7 +72,6 @@ def load_love_numbers_for_gins(
     models: Optional[dict[str, str]] = None,
     path: Path = SOLID_EARTH_NUMERICAL_MODELS_PATH,
     directory: str = DEFAULT_FOR_GINS_OUTPUT_DIRECTORY,
-    love_numbers_for_gins_tabs: Optional[dict[str, ndarray]] = None,
 ) -> tuple[dict[str, ndarray], ndarray, ndarray, ndarray, dict[str, ndarray]]:
     """
     Gets already computed Love numbers of interest and their derivatives with respect to alpha, Q_mu
@@ -85,12 +84,10 @@ def load_love_numbers_for_gins(
 
         models = MODELS
 
-    if love_numbers_for_gins_tabs is None:
-
-        love_numbers_for_gins_tabs = generate_parameter_lines(
-            parameters=build_parameter_tab_parametrization(n_parameter_values=dummy_variable),
-            write=False,
-        )
+    love_numbers_for_gins_tabs = generate_parameter_lines(
+        parameters=build_parameter_tab_parametrization(n_parameter_values=dummy_variable),
+        write=False,
+    )
 
     periods = array(
         object=load_base_model(name="periods_tab", path=path.joinpath(directory)), dtype=float
@@ -107,6 +104,8 @@ def load_love_numbers_for_gins(
         )
         for parameter in love_numbers_for_gins_tabs.keys()
     }  # Overwritten later.
+
+    print(love_numbers_for_gins_tabs)
 
     for iterators in product(*(range(len(tab)) for tab in love_numbers_for_gins_tabs.values())):
 
