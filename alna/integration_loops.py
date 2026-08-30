@@ -39,7 +39,11 @@ DEFAULT_FOR_GINS_OUTPUT_DIRECTORY = "for_gins"
 # Exponentiation base if 3-rd parameter is present.
 PARAMETERS_TO_INVERT_BOUNDS = {
     r"\alpha^{MANTLE_0}": (0.05, 0.4),
-    r"Q_\mu^{MANTLE_0}": (100, 400),
+    r"Q_\mu^{MANTLE_0}": (
+        2.0,  # 100. Tomography gives ~ 300.
+        4.0,  # 1000. Relation to tau_M can give a few thousands.
+        10.0,
+    ),
     r"\Delta^{MANTLE_0}": (
         -2.0,  # Almost no transient amplitude: 0.01 times elastic.
         1.0,  # 10 times the elastic amplitude.

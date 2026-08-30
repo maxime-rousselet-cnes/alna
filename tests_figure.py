@@ -19,7 +19,7 @@ from matplotlib.colors import Normalize, SymLogNorm
 from matplotlib.figure import Figure
 from matplotlib.pyplot import close, get_cmap, subplots, suptitle, tight_layout
 from matplotlib.ticker import StrMethodFormatter
-from numpy import array, atan2, diff, exp, flip, log10, meshgrid, ndarray, pi, zeros
+from numpy import array, atan2, diff, exp, log10, meshgrid, ndarray, pi, zeros
 
 from alna import (
     COMPLEX_PARTS,
@@ -430,58 +430,66 @@ def plot_love_numbers_for_gins(
     Prepares a Modulus/Phase plot or k_2.
     """
 
-    axes: Iterable[Axes]
-    figure, axes = subplots(1, 2, figsize=(12, 5), sharex=True, sharey=True)
+    ax_modulus: Axes
+    ax_phase: Axes
+    figure, (ax_modulus, ax_phase) = subplots(1, 2, figsize=(12, 5), sharex=True, sharey=True)
+    periods = 1 / exp(log_frequencies)
 
-    for ax, side in zip(axes, ["Modulus", "Phase"]):
+    modulus: ndarray = (love_numbers.real**2 + love_numbers.imag**2) ** 0.5
+    modulus_image = ax_modulus.pcolormesh(
+        periods[periods <= t_max_years],
+        parameter_values,
+        modulus[:, periods <= t_max_years],
+        cmap="RdBu",
+        shading="auto",
+        norm=Normalize(),
+    )
+    ax_modulus.xaxis.set_major_formatter(StrMethodFormatter("{x:g}"))
+    ax_modulus.yaxis.set_major_formatter(StrMethodFormatter("{x:g}"))
+    ax_modulus.set_xscale("log")
+    cbar_modulus = figure.colorbar(modulus_image, ax=ax_modulus, orientation="vertical")
+    cbar_modulus.ax.yaxis.set_major_formatter(StrMethodFormatter("{x:g}"))
+    cbar_modulus.set_label(r"          $|\frac{k_2(\omega)}{k_2^{el}}|$", fontsize=12, rotation=0)
+    ax_modulus.set_ylabel(r"$" + parameter + "$")
+    ax_modulus.set_xlabel("Period (yr)")
+    ax_modulus.set_title(rf"$k_2(\omega, {parameter})$")
 
-        periods = 1 / exp(log_frequencies)
-        data: ndarray = (
-            (love_numbers.real**2 + love_numbers.imag**2) ** 0.5
-            if side == "Modulus"
-            else atan2(
-                love_numbers.imag,
-                love_numbers.real,
-            )
-            * (2 * pi)
-            / exp(log_frequencies)
+    phase: ndarray = (
+        atan2(
+            love_numbers.imag,
+            love_numbers.real,
         )
-        image = ax.pcolormesh(
-            periods[periods <= t_max_years],
-            parameter_values,
-            data[:, periods <= t_max_years],
-            cmap="RdBu",
-            shading="auto",
-            norm=(
-                SymLogNorm(linthresh=1e-3, vmin=min(data.flatten()), vmax=max(data.flatten()))
-                if side == "Phase"
-                else Normalize()
-            ),
-        )
-        ax.xaxis.set_major_formatter(StrMethodFormatter("{x:g}"))
-        ax.yaxis.set_major_formatter(StrMethodFormatter("{x:g}"))
-        ax.set_xscale("log")
-        cbar = figure.colorbar(image, ax=ax, orientation="vertical")
-        cbar.ax.yaxis.set_major_formatter(StrMethodFormatter("{x:g}"))
-        cbar.set_label(
-            (
-                ("        years")
-                if side == "Phase"
-                else r"          $|\frac{k_2(\omega)}{k_2^{el}}|$"
-            ),
-            fontsize=10 if side == "Phase" else 12,
-            rotation=0,
-        )
-        ax.set_ylabel(r"$" + parameter + "$")
-        ax.set_xlabel("Period (yr)")
-        ax.set_title(rf"$k_2(\omega, {parameter})$")
+        * (2 * pi)
+        / exp(log_frequencies)
+    )
+    phase_image = ax_phase.pcolormesh(
+        periods[periods <= t_max_years],
+        parameter_values,
+        phase[:, periods <= t_max_years],
+        cmap="copper",
+        shading="auto",
+        norm=SymLogNorm(
+            linthresh=1e-3,
+            vmin=min(phase[:, periods <= t_max_years].flatten()),
+            vmax=max(phase[:, periods <= t_max_years].flatten()),
+        ),
+    )
+    ax_phase.xaxis.set_major_formatter(StrMethodFormatter("{x:g}"))
+    ax_phase.yaxis.set_major_formatter(StrMethodFormatter("{x:g}"))
+    ax_phase.set_xscale("log")
+    cbar_phase = figure.colorbar(phase_image, ax=ax_phase, orientation="vertical")
+    cbar_phase.ax.yaxis.set_major_formatter(StrMethodFormatter("{x:g}"))
+    cbar_phase.set_label("        years", fontsize=10, rotation=0)
+    ax_phase.set_ylabel(r"$" + parameter + "$")
+    ax_phase.set_xlabel("Period (yr)")
+    ax_phase.set_title(rf"$k_2(\omega, {parameter})$")
 
     tight_layout()
 
     return figure
 
 
-def test_plot_k_2_love_numbers_for_gins(
+def plot_k_2_love_numbers_for_gins(
     path: Path = TEST_SOLID_EARTH_NUMERICAL_MODEL_PATH,
     models: Optional[dict[str, str]] = None,
     n_parameter_values: int = 9,
@@ -536,4 +544,4 @@ def test_plot_k_2_love_numbers_for_gins(
 
 if __name__ == "__main__":
 
-    test_plot_k_2_love_numbers_for_gins()
+    plot_k_2_love_numbers_for_gins()

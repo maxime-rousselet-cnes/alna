@@ -64,7 +64,7 @@ def compute_love_numbers_for_gins(
 
 
 TO_GET_INVERSE_DERIVATIVES = {r"\omega_{m-inf}^{MANTLE_0}": r"\tau_{m-inf}^{MANTLE_0}"}
-TO_GET_LOG_DERIVATIVES = [r"\Delta^{MANTLE_0}", r"\tau_{m-inf}^{MANTLE_0}"]
+TO_GET_LOG_DERIVATIVES = [r"Q_\mu^{MANTLE_0}", r"\Delta^{MANTLE_0}", r"\tau_{m-inf}^{MANTLE_0}"]
 
 
 def load_love_numbers_for_gins(
@@ -74,10 +74,10 @@ def load_love_numbers_for_gins(
     directory: str = DEFAULT_FOR_GINS_OUTPUT_DIRECTORY,
 ) -> tuple[dict[str, ndarray], ndarray, ndarray, ndarray, dict[str, ndarray]]:
     """
-    Gets already computed Love numbers of interest and their derivatives with respect to alpha, Q_mu
-    log10(Delta) and log10(tau_m). Returns parameter tabs after change of variable, log frequencies,
-    elastic Love numbers, Love numbers, and Love number partials, every axis following ascending
-    order.
+    Gets already computed Love numbers of interest and their derivatives with respect to alpha,
+    log10(Q), log10(Delta) and log10(tau_m). Returns parameter tabs after change of variable, log
+    frequencies, elastic Love numbers, Love numbers, and Love number partials, every axis following
+    ascending order.
     """
 
     if models is None:
