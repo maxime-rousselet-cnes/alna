@@ -105,8 +105,6 @@ def load_love_numbers_for_gins(
         for parameter in love_numbers_for_gins_tabs.keys()
     }  # Overwritten later.
 
-    print(love_numbers_for_gins_tabs)
-
     for iterators in product(*(range(len(tab)) for tab in love_numbers_for_gins_tabs.values())):
 
         # Loads data for a point in parameter space.
@@ -125,9 +123,6 @@ def load_love_numbers_for_gins(
                 for parameter, iterator in zip(love_numbers_for_gins_tabs.keys(), iterators)
             ],
         )
-        print(path.joinpath(directory))
-        print(name)
-        print()
         dummy_variable = load_solid_earth_numerical_model(
             name=list(path.joinpath(directory).glob("*" + name + "*"))[0].name,
             path=path.joinpath(directory),
