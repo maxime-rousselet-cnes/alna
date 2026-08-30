@@ -126,6 +126,9 @@ def load_love_numbers_for_gins(
                 for parameter, iterator in zip(love_numbers_for_gins_tabs.keys(), iterators)
             ],
         )
+        print(path.joinpath(directory))
+        print(name)
+        print()
         dummy_variable = load_solid_earth_numerical_model(
             name=list(path.joinpath(directory).glob("*" + name + "*"))[0].name,
             path=path.joinpath(directory),
