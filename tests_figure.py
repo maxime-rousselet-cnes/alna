@@ -503,9 +503,7 @@ def plot_k_2_love_numbers_for_gins(
         models = MODELS
 
     love_numbers_for_gins_tabs, log_frequencies, elastic, anelastic, _ = load_love_numbers_for_gins(
-        dummy_variable=n_parameter_values,
-        path=path,
-        models=models,
+        path=path
     )  # (alpha, Q, Delta, tau_m, degrees, periods)
     n_parameters = len(love_numbers_for_gins_tabs.keys())
 

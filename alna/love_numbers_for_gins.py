@@ -8,9 +8,13 @@ from pathlib import Path
 from typing import Optional
 
 from base_models import MODELS, BoundaryCondition, Direction, load_base_model
-from numpy import array, flip, log, logspace, ndarray, zeros
+from numpy import array, flip, log, logspace, ndarray, sort, unique, zeros
 
-from .constants import SOLID_EARTH_NUMERICAL_MODELS_PATH, TEST_ELASTIC_INTEGRATION_PATH
+from .constants import (
+    SOLID_EARTH_NUMERICAL_MODEL_NAME_FROM_INVERTIBLE_PARAMETERS_SEPARATOR,
+    SOLID_EARTH_NUMERICAL_MODELS_PATH,
+    TEST_ELASTIC_INTEGRATION_PATH,
+)
 from .integration_loops import (
     DEFAULT_FOR_GINS_OUTPUT_DIRECTORY,
     MultiParametersLoop,
@@ -23,12 +27,13 @@ from .parameters import (
     build_base_name,
     compose_name_with_invertible_parameters,
     format_name_function,
-    generate_parameter_lines,
 )
-from .solid_earth_model import SolidEarthNumericalModel
 
 LOG10_PERIOD_LOWER_BOUND = -2  # (yr).
 LOG10_PERIOD_UPPER_BOUND = 4  # (yr).
+TO_GET_INVERSE_DERIVATIVES = {r"\omega_{m-inf}^{MANTLE_0}": r"\tau_{m-inf}^{MANTLE_0}"}
+GOT_INVERSE_DERIVATIVES = {v: k for k, v in TO_GET_INVERSE_DERIVATIVES.items()}
+TO_GET_LOG_DERIVATIVES = [r"Q_\mu^{MANTLE_0}", r"\Delta^{MANTLE_0}", r"\tau_{m-inf}^{MANTLE_0}"]
 
 
 def compute_love_numbers_for_gins(
@@ -63,15 +68,149 @@ def compute_love_numbers_for_gins(
     )
 
 
-TO_GET_INVERSE_DERIVATIVES = {r"\omega_{m-inf}^{MANTLE_0}": r"\tau_{m-inf}^{MANTLE_0}"}
-TO_GET_LOG_DERIVATIVES = [r"Q_\mu^{MANTLE_0}", r"\Delta^{MANTLE_0}", r"\tau_{m-inf}^{MANTLE_0}"]
+def load_single_model_love_numbers_for_gins(
+    file_path: Path = SOLID_EARTH_NUMERICAL_MODELS_PATH,
+    direction: Direction = Direction.POTENTIAL,
+    boundary_condition: BoundaryCondition = BoundaryCondition.POTENTIAL,
+) -> tuple[ndarray, ndarray, dict[str, ndarray]]:
+    """
+    Gets already computed Love numbers of interest and their derivatives with respect to alpha,
+    log10(Q), log10(Delta) and log10(tau_m). Returns parameter tabs after change of variable,
+    log frequencies, Love numbers, and Love number partials, degree axis and frequency axis
+    following ascending order.
+    """
+
+    periods = array(object=load_base_model(name="periods_tab", path=file_path.parent), dtype=float)
+    model = load_solid_earth_numerical_model(
+        name=file_path.name,
+        path=file_path.parent,
+    )
+    degrees = model.love_numbers["real"].keys()
+    parameters = model.love_number_partials["real"].keys()
+    love_numbers = zeros(shape=(len(degrees), len(periods)), dtype=complex)
+    love_number_partials = {
+        parameter: zeros(shape=(len(degrees), len(periods)), dtype=complex)
+        for parameter in parameters
+    }
+
+    for i_degree, degree in enumerate(degrees):
+
+        love_numbers[i_degree] = (
+            model.love_numbers["real"][degree][:, boundary_condition.value, direction.value]
+            + 1j * model.love_numbers["imag"][degree][:, boundary_condition.value, direction.value]
+        )
+
+        for parameter in parameters:
+
+            love_number_partials[parameter][i_degree] = (
+                model.love_number_partials["real"][parameter][degree][
+                    :, boundary_condition.value, direction.value
+                ]
+                + 1j
+                * model.love_number_partials["imag"][parameter][degree][
+                    :, boundary_condition.value, direction.value
+                ]
+            )
+
+    # Change of variables for inverse.
+    for parameter in parameters:
+
+        if parameter in TO_GET_INVERSE_DERIVATIVES.keys():
+
+            parameter_value = float(file_path.name.split(parameter)[1][1:9])
+            love_number_partials[TO_GET_INVERSE_DERIVATIVES[parameter]] = (
+                -(parameter_value**2) * love_number_partials[parameter]
+            )
+            del love_number_partials[parameter]
+
+    parameters = list(love_number_partials.keys())
+
+    # Change of variables for log.
+    for parameter in parameters:
+
+        if parameter in TO_GET_LOG_DERIVATIVES:
+
+            parameter_value = float(
+                file_path.name.split(
+                    parameter
+                    if parameter not in GOT_INVERSE_DERIVATIVES
+                    else GOT_INVERSE_DERIVATIVES[parameter]
+                )[1][1:9]
+            )
+            love_number_partials[r"\log_{10}" + parameter] = (
+                log(10) * parameter_value * love_number_partials[parameter]
+            )
+            del love_number_partials[parameter]
+
+    # Finally performs the period to frequency flip.
+    return (
+        flip(log(1 / periods)),
+        flip(m=love_numbers, axis=-1),
+        {
+            parameter: flip(m=love_number_partials_for_parameter, axis=-1)
+            for parameter, love_number_partials_for_parameter in love_number_partials.items()
+        },
+    )
+
+
+def get_tabs_from_all_love_number_files(
+    path: Path = SOLID_EARTH_NUMERICAL_MODELS_PATH.joinpath(DEFAULT_FOR_GINS_OUTPUT_DIRECTORY),
+) -> dict[str, ndarray]:
+    """
+    Gets the parameter grid from the Love numbers folder.
+    """
+
+    parameters: list[dict] = []
+
+    for file_path in path.glob("*"):
+
+        parameter_name_and_values = file_path.name.split(
+            SOLID_EARTH_NUMERICAL_MODEL_NAME_FROM_INVERTIBLE_PARAMETERS_SEPARATOR
+        )[1:]
+        parameters += [
+            {
+                parameter_name_and_value.split(".json")[0][:-9]: float(
+                    parameter_name_and_value.split(".json")[0][-8:]
+                )
+                for parameter_name_and_value in parameter_name_and_values
+            }
+        ]
+
+    parameter_tabs = {}
+
+    for parameter_line in parameters:
+
+        for parameter, value in parameter_line.items():
+
+            if parameter in parameter_tabs:
+
+                parameter_tabs[parameter] += [value]
+
+            else:
+
+                parameter_tabs[parameter] = [value]
+
+    return {parameter: sort(unique(tab)) for parameter, tab in parameter_tabs.items()}
+
+
+def modify(parameter: str, value: float) -> float:
+    """
+    TODO.
+    """
+
+    return (
+        (log(1 / value) if parameter in TO_GET_LOG_DERIVATIVES else 1 / value)
+        if parameter in TO_GET_INVERSE_DERIVATIVES
+        else (log(value) if parameter in TO_GET_LOG_DERIVATIVES else value)
+    )
 
 
 def load_love_numbers_for_gins(
-    dummy_variable: int | SolidEarthNumericalModel = 2,
-    models: Optional[dict[str, str]] = None,
+    degrees: list[int] = [2],
     path: Path = SOLID_EARTH_NUMERICAL_MODELS_PATH,
     directory: str = DEFAULT_FOR_GINS_OUTPUT_DIRECTORY,
+    direction: Direction = Direction.POTENTIAL,
+    boundary_condition: BoundaryCondition = BoundaryCondition.POTENTIAL,
 ) -> tuple[dict[str, ndarray], ndarray, ndarray, ndarray, dict[str, ndarray]]:
     """
     Gets already computed Love numbers of interest and their derivatives with respect to alpha,
@@ -80,129 +219,77 @@ def load_love_numbers_for_gins(
     ascending order.
     """
 
-    if models is None:
-
-        models = MODELS
-
-    love_numbers_for_gins_tabs = generate_parameter_lines(
-        parameters=build_parameter_tab_parametrization(n_parameter_values=dummy_variable),
-        write=False,
-    )
-
+    love_numbers_for_gins_tabs = get_tabs_from_all_love_number_files(path=path.joinpath(directory))
     periods = array(
         object=load_base_model(name="periods_tab", path=path.joinpath(directory)), dtype=float
     )
-    shape = (len(periods),)
     love_numbers = zeros(
-        shape=shape,
+        shape=tuple(
+            [len(tab) for tab in love_numbers_for_gins_tabs.values()] + [len(degrees), len(periods)]
+        ),
         dtype=complex,
-    )  # Overwritten later.
-    love_number_partials = {
-        parameter: zeros(
-            shape=shape,
-            dtype=complex,
-        )
-        for parameter in love_numbers_for_gins_tabs.keys()
-    }  # Overwritten later.
+    )
+    love_number_partials = {}
 
     for iterators in product(*(range(len(tab)) for tab in love_numbers_for_gins_tabs.values())):
 
-        # Loads data for a point in parameter space.
-        name = compose_name_with_invertible_parameters(
-            name=format_name_function(
-                name=build_base_name(models=models),
-                component_parameters=ComponentParameters(
-                    viscous_component=True,
-                    transient_component=True,
-                    bounded_attenuation_functions=True,
-                ),
-            ),
-            parameters_to_invert=love_numbers_for_gins_tabs.keys(),
-            invertible_parameters_tab=[
-                love_numbers_for_gins_tabs[parameter][iterator]
-                for parameter, iterator in zip(love_numbers_for_gins_tabs.keys(), iterators)
-            ],
-        )
-        dummy_variable = load_solid_earth_numerical_model(
-            name=list(path.joinpath(directory).glob("*" + name + "*"))[0].name,
-            path=path.joinpath(directory),
+        file_finder = list(
+            path.joinpath(directory).glob(
+                "*"
+                + "*".join(
+                    (
+                        f"{tab[iterator]:.2e}"
+                        for iterator, tab in zip(iterators, love_numbers_for_gins_tabs.values())
+                    )
+                )
+                + "*"
+            )
         )
 
-        # Adapts to the actual size of data.
-        if len(shape) <= 1:
+        if not file_finder:
 
-            shape = tuple(
-                [len(tab) for tab in love_numbers_for_gins_tabs.values()]
-                + [len(dummy_variable.love_numbers["real"].keys())]
-                + list(shape)  # len(periods)
+            raise NameError
+
+        _, love_numbers[iterators], love_number_partials_single_model = (
+            load_single_model_love_numbers_for_gins(
+                file_path=file_finder[0], direction=direction, boundary_condition=boundary_condition
             )
-            love_numbers = zeros(
-                shape=shape,
-                dtype=complex,
-            )
-            love_number_partials = {
-                parameter: zeros(
-                    shape=shape,
+        )
+
+        for (
+            parameter,
+            love_number_partials_for_parameter,
+        ) in love_number_partials_single_model.items():
+
+            if parameter not in love_number_partials:
+
+                love_number_partials[parameter] = zeros(
+                    shape=tuple(
+                        [len(tab) for tab in love_numbers_for_gins_tabs.values()]
+                        + [len(degrees), len(periods)]
+                    ),
                     dtype=complex,
                 )
-                for parameter in love_numbers_for_gins_tabs.keys()
-            }
 
-        for i_degree, degree in enumerate(dummy_variable.love_numbers["real"].keys()):
-
-            love_numbers[iterators + (i_degree,)] = (
-                dummy_variable.love_numbers["real"][degree][
-                    :,
-                    BoundaryCondition.POTENTIAL.value,
-                    Direction.POTENTIAL.value,
-                ]
-                + 1j
-                * dummy_variable.love_numbers["imag"][degree][
-                    :,
-                    BoundaryCondition.POTENTIAL.value,
-                    Direction.POTENTIAL.value,
-                ]
-            )
-
-            for parameter in love_numbers_for_gins_tabs.keys():
-
-                love_number_partials[parameter][iterators + (i_degree,)] = (
-                    dummy_variable.love_number_partials["real"][parameter][degree][
-                        :,
-                        BoundaryCondition.POTENTIAL.value,
-                        Direction.POTENTIAL.value,
-                    ]
-                    + 1j
-                    * dummy_variable.love_number_partials["imag"][parameter][degree][
-                        :,
-                        BoundaryCondition.POTENTIAL.value,
-                        Direction.POTENTIAL.value,
-                    ]
-                )
+            love_number_partials[parameter][iterators] = love_number_partials_for_parameter
 
     inverted_tabs = {}
     # Change of variables for inverse.
-    for i_axis, (parameter, parameter_values) in enumerate(love_numbers_for_gins_tabs.items()):
+    for i_axis, parameter in enumerate(love_numbers_for_gins_tabs.keys()):
 
         if parameter in TO_GET_INVERSE_DERIVATIVES.keys():
 
-            idx = [None] * len(shape)
-            idx[i_axis] = slice(None)
-            love_number_partials[TO_GET_INVERSE_DERIVATIVES[parameter]] = (
-                -parameter_values[tuple(idx)] ** 2 * love_number_partials[parameter]
-            )
             inverted_tabs[TO_GET_INVERSE_DERIVATIVES[parameter]] = 1 / flip(
                 m=love_numbers_for_gins_tabs[parameter]
             )
             love_numbers = flip(m=love_numbers, axis=i_axis)
 
-            for parameter in love_numbers_for_gins_tabs.keys():
+            for i_parameter in range(len(love_numbers_for_gins_tabs.keys())):
 
-                love_number_partials[parameter] = flip(
-                    m=love_number_partials[parameter], axis=i_axis
+                love_number_partials[list(love_number_partials.keys())[i_parameter]] = flip(
+                    m=love_number_partials[list(love_number_partials.keys())[i_parameter]],
+                    axis=i_axis,
                 )
-
-            del love_number_partials[parameter]
 
         else:
 
@@ -210,21 +297,20 @@ def load_love_numbers_for_gins(
 
     log_inverted_tabs = {}
     # Change of variables for log.
-    for i_axis, (parameter, parameter_values) in enumerate(inverted_tabs.items()):
+    for i_axis, parameter in enumerate(inverted_tabs.keys()):
 
         if parameter in TO_GET_LOG_DERIVATIVES:
 
-            idx = [None] * len(shape)
-            idx[i_axis] = slice(None)
-            love_number_partials[r"\log_{10}" + parameter] = (
-                log(10) * parameter_values[tuple(idx)] * love_number_partials[parameter]
-            )
             log_inverted_tabs[r"\log_{10}" + parameter] = log(inverted_tabs[parameter]) / log(10)
-            del love_number_partials[parameter]
 
         else:
 
             log_inverted_tabs[parameter] = inverted_tabs[parameter]
+
+    elastic = load_solid_earth_numerical_model(
+        name="PREM",
+        path=TEST_ELASTIC_INTEGRATION_PATH,
+    ).love_numbers["real"]
 
     # Finally performs the period to frequency flip.
     return (
@@ -232,19 +318,13 @@ def load_love_numbers_for_gins(
         flip(log(1 / periods)),
         array(
             object=[
-                load_solid_earth_numerical_model(
-                    name="PREM",
-                    path=TEST_ELASTIC_INTEGRATION_PATH,
-                ).love_numbers["real"][degree][0][
-                    BoundaryCondition.POTENTIAL.value,
-                    Direction.POTENTIAL.value,
+                elastic[degree][0][
+                    boundary_condition.value,
+                    direction.value,
                 ]
-                for degree in dummy_variable.love_numbers["real"].keys()
+                for degree in degrees
             ]
         ),
-        flip(m=love_numbers, axis=-1),
-        {
-            parameter: flip(m=love_number_partials_for_parameter, axis=-1)
-            for parameter, love_number_partials_for_parameter in love_number_partials.items()
-        },
+        love_numbers,
+        love_number_partials,
     )
