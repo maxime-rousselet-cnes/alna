@@ -37,7 +37,10 @@ from .integration_loops import (
 from .load_solid_earth_model import load_solid_earth_numerical_model
 from .love_numbers_for_gins import (
     MODELS,
+    TO_GET_INVERSE_DERIVATIVES,
+    TO_GET_LOG_DERIVATIVES,
     compute_love_numbers_for_gins,
+    get_tabs_from_all_love_number_files,
     load_love_numbers_for_gins,
     load_single_model_love_numbers_for_gins,
 )
@@ -88,7 +91,10 @@ to_import = [
     viscous_model_integration_test,
     load_solid_earth_numerical_model,
     MODELS,
+    TO_GET_INVERSE_DERIVATIVES,
+    TO_GET_LOG_DERIVATIVES,
     compute_love_numbers_for_gins,
+    get_tabs_from_all_love_number_files,
     load_love_numbers_for_gins,
     load_single_model_love_numbers_for_gins,
     DEFAULT_COMPONENT_PARAMETERS,
