@@ -22,12 +22,6 @@ from .integration_loops import (
     multi_parameter_integration,
 )
 from .load_solid_earth_model import load_solid_earth_numerical_model
-from .parameters import (
-    ComponentParameters,
-    build_base_name,
-    compose_name_with_invertible_parameters,
-    format_name_function,
-)
 
 LOG10_PERIOD_LOWER_BOUND = -2  # (yr).
 LOG10_PERIOD_UPPER_BOUND = 4  # (yr).
@@ -75,9 +69,8 @@ def load_single_model_love_numbers_for_gins(
 ) -> tuple[ndarray, ndarray, dict[str, ndarray]]:
     """
     Gets already computed Love numbers of interest and their derivatives with respect to alpha,
-    log10(Q), log10(Delta) and log10(tau_m). Returns parameter tabs after change of variable,
-    log frequencies, Love numbers, and Love number partials, degree axis and frequency axis
-    following ascending order.
+    log10(Q), log10(Delta) and log10(tau_m). Returns log frequencies, Love numbers, and Love number
+    partials, degree axis and frequency axis following ascending order.
     """
 
     periods = array(object=load_base_model(name="periods_tab", path=file_path.parent), dtype=float)

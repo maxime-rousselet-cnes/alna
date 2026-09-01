@@ -35,7 +35,12 @@ from .integration_loops import (
     viscous_model_integration_test,
 )
 from .load_solid_earth_model import load_solid_earth_numerical_model
-from .love_numbers_for_gins import MODELS, compute_love_numbers_for_gins, load_love_numbers_for_gins
+from .love_numbers_for_gins import (
+    MODELS,
+    compute_love_numbers_for_gins,
+    load_love_numbers_for_gins,
+    load_single_model_love_numbers_for_gins,
+)
 from .parameters import (
     DEFAULT_COMPONENT_PARAMETERS,
     ComponentParameters,
@@ -85,6 +90,7 @@ to_import = [
     MODELS,
     compute_love_numbers_for_gins,
     load_love_numbers_for_gins,
+    load_single_model_love_numbers_for_gins,
     DEFAULT_COMPONENT_PARAMETERS,
     ComponentParameters,
     LoveNumbersLauncher,
