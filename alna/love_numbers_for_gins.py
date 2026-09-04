@@ -130,6 +130,11 @@ def load_single_model_love_numbers_for_gins(
                     else GOT_INVERSE_DERIVATIVES[parameter]
                 )[1][1:9]
             )
+
+            if parameter in GOT_INVERSE_DERIVATIVES:
+
+                parameter_value = 1 / parameter_value
+
             love_number_partials[r"\log_{10}" + parameter] = (
                 log(10) * parameter_value * love_number_partials[parameter]
             )
