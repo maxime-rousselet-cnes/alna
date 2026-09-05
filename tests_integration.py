@@ -13,10 +13,10 @@ from pytest import Config
 from alna import (
     DEFAULT_COMPONENT_PARAMETERS,
     DEFAULT_REFERENCE_LOVE_NUMBERS_PATH,
+    ELASTIC_INTEGRATION_PATH,
     ELASTIC_PERIOD_TAB,
     NUMERICAL_TOLERANCE,
-    TEST_ELASTIC_INTEGRATION_PATH,
-    TEST_PARAMETERS_SAVE_PATH,
+    PARAMETERS_SAVE_PATH,
     SolidEarthModelDescription,
     SolidEarthNumericalModel,
     SolidEarthParameters,
@@ -33,8 +33,8 @@ from alna import (
 def test_integrate_elastic(
     model: str = DEFAULT_MODELS[SolidEarthModelPart.ELASTIC.value],
     name: str = "parameters",
-    path: Path = TEST_PARAMETERS_SAVE_PATH,
-    test_path: Path = TEST_ELASTIC_INTEGRATION_PATH,
+    path: Path = PARAMETERS_SAVE_PATH,
+    test_path: Path = ELASTIC_INTEGRATION_PATH,
     reference_love_numbers_path: Path = DEFAULT_REFERENCE_LOVE_NUMBERS_PATH,
 ) -> None:
     """

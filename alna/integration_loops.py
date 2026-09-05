@@ -15,12 +15,11 @@ from .constants import (
     COMPLEX_PARTS,
     DEFAULT_PARAMETERS_NAME,
     DEFAULT_UUID_LENGTH,
+    ELASTIC_INTEGRATION_PATH,
     ELASTIC_PERIOD_TAB,
     PARTIAL_PERIOD_TAB,
-    ROOT_PATH,
     SOLID_EARTH_NUMERICAL_MODELS_PATH,
-    TEST_ELASTIC_INTEGRATION_PATH,
-    TEST_SOLID_EARTH_NUMERICAL_MODEL_PATH,
+    WORKDIR,
 )
 from .load_solid_earth_model import load_solid_earth_numerical_model
 from .parameters import LoveNumbersLauncher, launch_love_numbers_computing
@@ -30,6 +29,7 @@ from .solid_earth_model import (
     SolidEarthParameters,
 )
 
+VISCOUS_INTEGRATION_PATH = SOLID_EARTH_NUMERICAL_MODELS_PATH.joinpath("viscous")
 NUMERICAL_TOLERANCE = 5e-5
 DEFAULT_LOG10_PERIODS_FOR_VISCOUS_INTEGRATION_TEST_LOWER_BOUND = -3
 DEFAULT_LOG10_PERIODS_FOR_VISCOUS_INTEGRATION_TEST_UPPER_BOUND = 5
@@ -59,13 +59,17 @@ PARAMETERS_TO_INVERT_BOUNDS = {
 
 def build_parameter_tab_parametrization(
     n_parameter_values: int = 2,
-    parameter_to_invert_bounds: dict[
-        str, tuple[float, float] | tuple[float, float, float]
-    ] = PARAMETERS_TO_INVERT_BOUNDS,
+    parameter_to_invert_bounds: Optional[
+        dict[str, tuple[float, float] | tuple[float, float, float]]
+    ] = None,
 ) -> dict[str, tuple[float, float, int] | tuple[float, float, int, float]]:
     """
     Generates parameter linspace arguments or logspace arguments.
     """
+
+    if parameter_to_invert_bounds is None:
+
+        parameter_to_invert_bounds = PARAMETERS_TO_INVERT_BOUNDS
 
     return {
         parameter: (
@@ -217,8 +221,8 @@ def viscous_model_integration_test(
     account: str = "",
     n_periods: int = 2,
     models: Optional[dict[str, str]] = None,
-    elastic_test_path: Path = TEST_ELASTIC_INTEGRATION_PATH,
-    test_path: Path = TEST_SOLID_EARTH_NUMERICAL_MODEL_PATH,
+    elastic_test_path: Path = ELASTIC_INTEGRATION_PATH,
+    viscous_integration_test_path: Path = VISCOUS_INTEGRATION_PATH,
 ) -> None:
     """
     Integrates a model to benchmark in the Maxwell setting.
@@ -230,7 +234,6 @@ def viscous_model_integration_test(
         num=n_periods,
         base=10,
     )
-    viscous_integration_test_path = test_path.joinpath("viscous")
     models = initialize_test(models=models, test_path=viscous_integration_test_path)
     solid_earth_numerical_model: SolidEarthNumericalModel = load_solid_earth_numerical_model(
         name=models[SolidEarthModelPart.ELASTIC.value], path=elastic_test_path
@@ -265,7 +268,7 @@ class MultiParametersLoop(BaseModel):
     parameters: Optional[
         dict[str, list[float] | tuple[float, float, int] | tuple[float, float, int, float]]
     ] = None
-    parameters_path: Path = ROOT_PATH
+    parameters_path: Path = WORKDIR
     parameters_file_name: str = DEFAULT_PARAMETERS_NAME
     path: Path = SOLID_EARTH_NUMERICAL_MODELS_PATH
     output_directory: str = DEFAULT_FOR_GINS_OUTPUT_DIRECTORY
@@ -381,8 +384,8 @@ def partial_integration_test_per_parameter(
 def partials_per_parameter_integration_tests(
     account: str = "",
     n_partial_tests: int = 2,
-    path: Path = TEST_SOLID_EARTH_NUMERICAL_MODEL_PATH,
-    parameters_path: Path = ROOT_PATH,
+    path: Path = SOLID_EARTH_NUMERICAL_MODELS_PATH,
+    parameters_path: Path = WORKDIR,
     parameters_file_name: str = DEFAULT_PARAMETERS_NAME,
 ) -> None:
     """

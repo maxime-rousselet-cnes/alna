@@ -22,14 +22,12 @@ from shlex import quote
 from subprocess import CalledProcessError, run
 from sys import executable
 
-from base_models import DEFAULT_WORKDIR
-
-from alna import DEFAULT_PARAMETER_LINES_PATH, ROOT_PATH
+from alna import DEFAULT_PARAMETER_LINES_PATH, WORKDIR
 from exe_love_numbers_computing import parse_general_args
 
-DEFAULT_CLUSTER_VENV = ROOT_PATH.parent.joinpath("alna_venv")
+DEFAULT_CLUSTER_VENV = WORKDIR.parent.joinpath("venv")
 DEFAULT_CLUSTER_PYTHON_MODULE = "python/3.11.10"
-DEFAULT_SINGLE_JOB_SCRIPT = str(ROOT_PATH.joinpath("exe_love_numbers_computing.py").resolve())
+DEFAULT_SINGLE_JOB_SCRIPT = str(WORKDIR.joinpath("exe_love_numbers_computing.py").resolve())
 LAUNCHER_PATH = Path(__file__).resolve()
 
 
@@ -168,7 +166,7 @@ def run_one_task(args: Namespace, task_id: int = 1) -> None:
             cmd.extend([name, str(value)])
 
     print(f"[task {task_id}] command: " + " ".join(quote(s=x) for x in cmd), flush=True)
-    run(args=cmd, cwd=DEFAULT_WORKDIR, check=True)
+    run(args=cmd, cwd=WORKDIR, check=True)
 
 
 def local_worker(args: Namespace, task_id: int = 1) -> tuple[int, bool, str]:
@@ -251,7 +249,7 @@ def quote_slurm_arg(x: str) -> str:
     return quote(str(x))
 
 
-def make_slurm_script(args: Namespace, workdir: Path = DEFAULT_WORKDIR) -> Path:
+def make_slurm_script(args: Namespace, workdir: Path = WORKDIR) -> Path:
     """
     Generates an sbatch script that runs one array task.
     Each Slurm array task calls this same script in "worker" mode.
@@ -322,7 +320,7 @@ echo "Job finished."
     return slurm_file
 
 
-def submit_slurm(args: Namespace, workdir: Path = DEFAULT_WORKDIR) -> None:
+def submit_slurm(args: Namespace, workdir: Path = WORKDIR) -> None:
     """
     Submits all jobs on the cluster.
     """

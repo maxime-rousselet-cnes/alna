@@ -4,7 +4,7 @@ Numerical constants.
 
 from pathlib import Path
 
-from base_models import SOLID_EARTH_MODEL_PROFILES, TEST_FIGURES_PATH, TEST_PATH
+from base_models import DATA_PATH, FIGURES_PATH, SOLID_EARTH_MODEL_PROFILES
 from matplotlib.figure import Figure
 from numpy import arange, array, asarray, concatenate, exp, ndarray, pi
 from numpy.polynomial.laguerre import laggauss
@@ -14,40 +14,34 @@ N_GAUSS_LAGUERRE = 64
 N_LERCH_SERIES = 50
 T_GAUSS_LAGUERRE, W_GAUSS_LAGUERRE = laggauss(deg=N_GAUSS_LAGUERRE)
 DEFAULT_UUID_LENGTH = 10
-
-ROOT_PATH = Path("../alna").resolve()
-
-### Solid Earth model descriptions.
-SOLID_EARTH_MODEL_PROFILE_DESCRIPTIONS_ROOT_PATH = ROOT_PATH.joinpath(
+DEFAULT_PARAMETERS_NAME = "parameters"
+WORKDIR = Path(".").resolve()
+LOCAL_SOLID_EARTH_MODEL_PROFILE_DESCRIPTIONS_ROOT_PATH = WORKDIR.joinpath(
     "solid_earth_model_profile_descriptions"
 )
-DEFAULT_PARAMETERS_NAME = "parameters"
+LOCAL_SOLID_EARTH_MODEL_PROFILE_DESCRIPTIONS_PATH: dict[str, Path] = {
+    model_part: LOCAL_SOLID_EARTH_MODEL_PROFILE_DESCRIPTIONS_ROOT_PATH.joinpath(model_part)
+    for model_part in SOLID_EARTH_MODEL_PROFILES
+}
+SOLID_EARTH_MODEL_PROFILE_DESCRIPTIONS_ROOT_PATH = DATA_PATH.joinpath(
+    "solid_earth_model_profile_descriptions"
+)
 SOLID_EARTH_MODEL_PROFILE_DESCRIPTIONS_PATH: dict[str, Path] = {
     model_part: SOLID_EARTH_MODEL_PROFILE_DESCRIPTIONS_ROOT_PATH.joinpath(model_part)
     for model_part in SOLID_EARTH_MODEL_PROFILES
 }
-
-TEST_SOLID_EARTH_NUMERICAL_MODEL_PATH = TEST_PATH.joinpath("solid_earth_numerical_models")
-TEST_ELASTIC_INTEGRATION_PATH = TEST_SOLID_EARTH_NUMERICAL_MODEL_PATH.joinpath(
-    "elastic_integration_test"
-)
-
-## Solid Earth numerical models.
-SOLID_EARTH_NUMERICAL_MODELS_PATH = TEST_PATH.joinpath("solid_earth_numerical_models")
-
+SOLID_EARTH_NUMERICAL_MODELS_PATH = DATA_PATH.joinpath("solid_earth_numerical_models")
+ELASTIC_INTEGRATION_PATH = SOLID_EARTH_NUMERICAL_MODELS_PATH.joinpath("elastic_integration")
 # Michel et al. (2021) reference Love numbers for validation.
-DEFAULT_REFERENCE_LOVE_NUMBERS_PATH = Path("../elastic_benchmark").resolve()
+DEFAULT_REFERENCE_LOVE_NUMBERS_PATH = WORKDIR.joinpath("../elastic_benchmark").resolve()
 
 # For parallel computing.
 DEFAULT_PERIOD_TAB_PER_DEGREE_FILE_NAME = "period_tab_per_degree"
-DEFAULT_PERIOD_TAB_PER_DEGREE_PATH = TEST_PATH.joinpath("period_tab_per_degree")
+DEFAULT_PERIOD_TAB_PER_DEGREE_PATH = DATA_PATH.joinpath("period_tab_per_degree")
 DEFAULT_PARAMETER_LINES_FILE_NAME = "parameter_lines.jsonl"
-DEFAULT_PARAMETER_LINES_PATH = TEST_PATH.joinpath("parameter_lines")
-TEST_SOLID_EARTH_MODEL_PROFILE_DESCRIPTIONS_PATH = TEST_PATH.joinpath(
-    "solid_earth_model_profile_descriptions"
-)
-TEST_PARAMETERS_FILE_PATH = Path(".")
-TEST_PARAMETERS_SAVE_PATH = TEST_PATH.joinpath("solid_earth_parameters")
+DEFAULT_PARAMETER_LINES_PATH = DATA_PATH.joinpath("parameter_lines")
+PARAMETERS_FILE_PATH = Path(".")
+PARAMETERS_SAVE_PATH = DATA_PATH.joinpath("solid_earth_parameters")
 PARTIAL_PERIOD_TAB = array(object=[1.0, 9.3, 18.6])  # (yr).
 ELASTIC_PERIOD_TAB = array(object=[1.0], dtype=float)  # (yr).
 
@@ -210,7 +204,7 @@ def compute_omega_tab(period_tab: ndarray) -> ndarray:
     return 2 * pi / (SECONDS_PER_YEAR * asarray(a=period_tab, dtype=float))
 
 
-def save_figure(figure: Figure, figure_title: str, path: Path = TEST_FIGURES_PATH) -> None:
+def save_figure(figure: Figure, figure_title: str, path: Path = FIGURES_PATH) -> None:
     """
     Saves figure to specified path.
     """

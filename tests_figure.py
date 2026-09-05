@@ -8,7 +8,7 @@ from typing import Iterable, Optional
 
 from base_models import (
     DEFAULT_MODELS,
-    TEST_FIGURES_PATH,
+    FIGURES_PATH,
     BoundaryCondition,
     Direction,
     SolidEarthModelPart,
@@ -24,11 +24,11 @@ from numpy import array, atan2, diff, exp, log10, meshgrid, ndarray, pi, zeros
 from alna import (
     COMPLEX_PARTS,
     DEFAULT_REFERENCE_LOVE_NUMBERS_PATH,
-    MODELS,
+    ELASTIC_INTEGRATION_PATH,
     PARAMETERS_TO_INVERT_BOUNDS,
     SOLID_EARTH_NUMERICAL_MODEL_PART_NAMES_SEPARATOR,
-    TEST_ELASTIC_INTEGRATION_PATH,
-    TEST_SOLID_EARTH_NUMERICAL_MODEL_PATH,
+    SOLID_EARTH_NUMERICAL_MODELS_PATH,
+    VISCOUS_INTEGRATION_PATH,
     ComponentParameters,
     build_base_name,
     compose_name_with_invertible_parameters,
@@ -44,9 +44,9 @@ FINITE_DIFFERENCES_SMOOTHER = 1
 
 def test_compare_plot_to_elastic_reference(
     model: str = DEFAULT_MODELS[SolidEarthModelPart.ELASTIC.value],
-    test_path: Path = TEST_ELASTIC_INTEGRATION_PATH,
+    test_path: Path = ELASTIC_INTEGRATION_PATH,
     reference_love_numbers_path: Path = DEFAULT_REFERENCE_LOVE_NUMBERS_PATH,
-    path: Path = TEST_FIGURES_PATH,
+    path: Path = FIGURES_PATH,
 ) -> None:
     """
     Generates a figure of 3 subplots respectively for (h', l', k'), (h*, l*, k*) and (h, l, k).
@@ -173,12 +173,13 @@ def sub_function_compare_plot_viscous_to_elastic(
 
 def test_compare_plot_viscous_to_elastic(
     models: Optional[dict[str, str]] = None,
-    elastic_test_path: Path = TEST_ELASTIC_INTEGRATION_PATH,
-    test_path: Path = TEST_SOLID_EARTH_NUMERICAL_MODEL_PATH.joinpath("viscous"),
-    path: Path = TEST_FIGURES_PATH,
+    elastic_test_path: Path = ELASTIC_INTEGRATION_PATH,
+    test_path: Path = VISCOUS_INTEGRATION_PATH,
+    path: Path = FIGURES_PATH,
     period_tab: ndarray = array(
         object=load_base_model(
-            name="periods_tab", path=TEST_SOLID_EARTH_NUMERICAL_MODEL_PATH.joinpath("viscous")
+            name="periods_tab",
+            path=VISCOUS_INTEGRATION_PATH,
         ),
         dtype=float,
     ),
@@ -362,7 +363,7 @@ def plot_love_number_partials(
 def compare_plot_semi_analytical_partials_to_finite_differences(
     models: Optional[dict[str, str]] = None,
     parameter: str = r"\alpha^{MANTLE_0}",
-    test_path: Path = TEST_SOLID_EARTH_NUMERICAL_MODEL_PATH,
+    test_path: Path = SOLID_EARTH_NUMERICAL_MODELS_PATH,
 ) -> None:
     """
     Generates a figure of 3 subplots as a function of degree and period, for h', l', and k'.
@@ -391,7 +392,7 @@ def compare_plot_semi_analytical_partials_to_finite_differences(
         parameter_tab=parameter_tab,
     )
     tight_layout()
-    save_figure(figure=figure, figure_title=parameter + " partials", path=TEST_FIGURES_PATH)
+    save_figure(figure=figure, figure_title=parameter + " partials", path=FIGURES_PATH)
 
 
 def test_compare_plot_semi_analytical_partials_to_finite_differences(
@@ -411,7 +412,7 @@ def test_compare_plot_semi_analytical_partials_to_finite_differences(
         parameter=r"\eta_m^{UPPER-MANTLE_0}",
     )
 
-    for parameter in PARAMETERS_TO_INVERT_BOUNDS.keys():
+    for parameter in PARAMETERS_TO_INVERT_BOUNDS:
 
         compare_plot_semi_analytical_partials_to_finite_differences(
             models=models,
@@ -469,7 +470,6 @@ def plot_love_numbers_for_gins(
         cmap="copper",
         shading="auto",
         norm=SymLogNorm(
-            linthresh=1e-3,
             vmin=min(phase[:, periods <= t_max_years].flatten()),
             vmax=max(phase[:, periods <= t_max_years].flatten()),
         ),
@@ -490,17 +490,12 @@ def plot_love_numbers_for_gins(
 
 
 def plot_k_2_love_numbers_for_gins(
-    path: Path = TEST_SOLID_EARTH_NUMERICAL_MODEL_PATH,
-    models: Optional[dict[str, str]] = None,
+    path: Path = SOLID_EARTH_NUMERICAL_MODELS_PATH,
     n_parameter_values: int = 9,
 ) -> None:
     """
     Shows the GINS-ready Love numbers for real and imaginary parts. Assumes degrees = [2]
     """
-
-    if models is None:
-
-        models = MODELS
 
     love_numbers_for_gins_tabs, log_frequencies, elastic, anelastic, _ = load_love_numbers_for_gins(
         path=path
@@ -535,7 +530,7 @@ def plot_k_2_love_numbers_for_gins(
                     parameters_to_invert=fixed_parameters,
                     invertible_parameters_tab=fixed_parameter_values,
                 ),
-                path=TEST_FIGURES_PATH.joinpath("Love numbers for GINS").joinpath(parameter),
+                path=FIGURES_PATH.joinpath("Love numbers for GINS").joinpath(parameter),
             )
             close()
 

@@ -10,13 +10,7 @@ from subprocess import run
 from sys import executable
 from typing import Optional
 
-from base_models import (
-    DEFAULT_MODELS,
-    DEFAULT_WORKDIR,
-    EARTH_RADIUS,
-    SolidEarthModelPart,
-    save_base_model,
-)
+from base_models import DEFAULT_MODELS, EARTH_RADIUS, SolidEarthModelPart, save_base_model
 from numpy import linspace, logspace, ndarray
 from pydantic import BaseModel
 
@@ -25,10 +19,10 @@ from .constants import (
     DEFAULT_PARAMETER_LINES_PATH,
     DEFAULT_PERIOD_TAB_PER_DEGREE_FILE_NAME,
     DEFAULT_PERIOD_TAB_PER_DEGREE_PATH,
-    ROOT_PATH,
     SOLID_EARTH_NUMERICAL_MODEL_NAME_FROM_INVERTIBLE_PARAMETERS_SEPARATOR,
     SOLID_EARTH_NUMERICAL_MODEL_PART_NAMES_SEPARATOR,
     SOLID_EARTH_NUMERICAL_MODELS_PATH,
+    WORKDIR,
 )
 
 
@@ -322,7 +316,7 @@ def launch_love_numbers_computing(
     run(
         args=[
             executable,
-            str(ROOT_PATH.joinpath("exe_love_numbers_jobs_launcher.py").resolve()),
+            str(WORKDIR.joinpath("exe_love_numbers_jobs_launcher.py").resolve()),
             "submit" if account else "local",
             "--name",
             love_numbers_launcher.name,
@@ -341,6 +335,6 @@ def launch_love_numbers_computing(
         ]
         + (["--account", account] if account else [])
         + (base_command if base_command else []),
-        cwd=str(DEFAULT_WORKDIR.resolve()),
+        cwd=str(WORKDIR.resolve()),
         check=True,
     )

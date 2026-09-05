@@ -23,7 +23,7 @@ from .constants import (
     COMPLEX_PARTS,
     INITIAL_Y_I,
     LAYERS_SEPARATOR,
-    SOLID_EARTH_MODEL_PROFILE_DESCRIPTIONS_PATH,
+    LOCAL_SOLID_EARTH_MODEL_PROFILE_DESCRIPTIONS_PATH,
     SOLID_EARTH_NUMERICAL_MODEL_NAME_FROM_INVERTIBLE_PARAMETERS_SEPARATOR,
     SOLID_EARTH_NUMERICAL_MODEL_PART_NAMES_SEPARATOR,
     SOLID_EARTH_NUMERICAL_MODELS_PATH,
@@ -858,7 +858,7 @@ class SolidEarthModelDescription:
             path=(
                 path
                 if not path is None
-                else SOLID_EARTH_MODEL_PROFILE_DESCRIPTIONS_PATH[solid_earth_model_part.value]
+                else LOCAL_SOLID_EARTH_MODEL_PROFILE_DESCRIPTIONS_PATH[solid_earth_model_part.value]
             ),
         )
         self.layer_names = loaded_content["layer_names"]

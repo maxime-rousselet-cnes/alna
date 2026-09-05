@@ -10,11 +10,11 @@ from numpy import ndarray
 
 from alna import (
     ELASTIC_PERIOD_TAB,
+    PARAMETERS_FILE_PATH,
+    PARAMETERS_SAVE_PATH,
     PARTIAL_PERIOD_TAB,
-    TEST_PARAMETERS_FILE_PATH,
-    TEST_PARAMETERS_SAVE_PATH,
-    TEST_SOLID_EARTH_MODEL_PROFILE_DESCRIPTIONS_PATH,
-    TEST_SOLID_EARTH_NUMERICAL_MODEL_PATH,
+    SOLID_EARTH_MODEL_PROFILE_DESCRIPTIONS_ROOT_PATH,
+    SOLID_EARTH_NUMERICAL_MODELS_PATH,
     LoveNumbersLauncher,
     SolidEarthModelDescription,
     SolidEarthNumericalModel,
@@ -29,7 +29,7 @@ from alna import (
 
 def test_load_solid_earth_model_profile_descriptions(
     models: Optional[dict[str, str]] = None,
-    test_path: Path = TEST_SOLID_EARTH_MODEL_PROFILE_DESCRIPTIONS_PATH,
+    test_path: Path = SOLID_EARTH_MODEL_PROFILE_DESCRIPTIONS_ROOT_PATH,
 ) -> None:
     """
     Loads solid Earth model profile descriptions, then saves and reloads to verify consistency.
@@ -56,8 +56,8 @@ def test_load_solid_earth_model_profile_descriptions(
 
 def test_load_solid_earth_parameters(
     name: str = "parameters",
-    path: Path = TEST_PARAMETERS_FILE_PATH,
-    save_path: Path = TEST_PARAMETERS_SAVE_PATH,
+    path: Path = PARAMETERS_FILE_PATH,
+    save_path: Path = PARAMETERS_SAVE_PATH,
 ) -> None:
     """
     Loads solid Earth model profile descriptions, then saves and reloads to verify consistency.
@@ -81,8 +81,8 @@ def test_load_solid_earth_parameters(
 def test_load_solid_earth_numerical_model(
     model: str = DEFAULT_MODELS[SolidEarthModelPart.ELASTIC.value],
     name: str = "parameters",
-    path: Path = TEST_PARAMETERS_SAVE_PATH,
-    test_path: Path = TEST_SOLID_EARTH_NUMERICAL_MODEL_PATH,
+    path: Path = PARAMETERS_SAVE_PATH,
+    test_path: Path = SOLID_EARTH_NUMERICAL_MODELS_PATH,
 ) -> None:
     """
     Loads an elastic solid Earth model profile description, generates the corresponding elastic
@@ -112,8 +112,8 @@ def test_load_solid_earth_numerical_model(
 def test_merge_solid_earth_numerical_models(
     models: Optional[dict[str, str]] = None,
     name: str = "parameters",
-    path: Path = TEST_PARAMETERS_SAVE_PATH,
-    test_path: Path = TEST_SOLID_EARTH_NUMERICAL_MODEL_PATH,
+    path: Path = PARAMETERS_SAVE_PATH,
+    test_path: Path = SOLID_EARTH_NUMERICAL_MODELS_PATH,
 ) -> None:
     """
     Loads an elastic solid Earth model profile description, generates the corresponding elastic
@@ -150,8 +150,8 @@ def test_merge_solid_earth_numerical_models(
 def test_check_anelastic_settings(
     models: Optional[dict[str, str]] = None,
     name: str = "parameters",
-    path: Path = TEST_PARAMETERS_SAVE_PATH,
-    test_path: Path = TEST_SOLID_EARTH_NUMERICAL_MODEL_PATH.joinpath("check_anelastic_setting"),
+    path: Path = PARAMETERS_SAVE_PATH,
+    test_path: Path = SOLID_EARTH_NUMERICAL_MODELS_PATH.joinpath("check_anelastic_setting"),
     periods_tab: ndarray = ELASTIC_PERIOD_TAB,
 ) -> None:
     """
@@ -205,7 +205,7 @@ def test_check_anelastic_settings(
 
 def test_partials(
     models: Optional[dict[str, str]] = None,
-    test_path: Path = TEST_SOLID_EARTH_NUMERICAL_MODEL_PATH.joinpath("partials"),
+    test_path: Path = SOLID_EARTH_NUMERICAL_MODELS_PATH.joinpath("partials"),
     periods_tab: ndarray = PARTIAL_PERIOD_TAB,
 ) -> None:
     """
