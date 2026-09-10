@@ -41,7 +41,7 @@ PARAMETERS_TO_INVERT_BOUNDS = {
     r"\alpha^{MANTLE_0}": (0.05, 0.4),
     r"Q_\mu^{MANTLE_0}": (
         2.0,  # 100. Tomography gives ~ 300.
-        4.0,  # 1000. Relation to tau_M can give a few thousands.
+        4.0,  # 10000. Relation to tau_M can give a few thousands.
         10.0,
     ),
     r"\Delta^{MANTLE_0}": (

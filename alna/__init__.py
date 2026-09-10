@@ -28,14 +28,19 @@ from .integration_loops import (
     NUMERICAL_TOLERANCE,
     PARAMETERS_TO_INVERT_BOUNDS,
     VISCOUS_INTEGRATION_PATH,
+    MultiParametersLoop,
+    build_parameter_tab_parametrization,
     initialize_test,
     load_reference_love_numbers_for_validation,
+    multi_parameter_integration,
     partials_per_parameter_integration_tests,
     verify_solid_earth_numerical_model_consistency,
     viscous_model_integration_test,
 )
 from .load_solid_earth_model import load_solid_earth_numerical_model
 from .love_numbers_for_gins import (
+    LOG10_PERIOD_LOWER_BOUND,
+    LOG10_PERIOD_UPPER_BOUND,
     MODELS,
     TO_GET_INVERSE_DERIVATIVES,
     TO_GET_LOG_DERIVATIVES,
@@ -61,6 +66,11 @@ from .solid_earth_model import (
 )
 
 to_import = [
+    LOG10_PERIOD_LOWER_BOUND,
+    LOG10_PERIOD_UPPER_BOUND,
+    MultiParametersLoop,
+    build_parameter_tab_parametrization,
+    multi_parameter_integration,
     COMPLEX_PARTS,
     DEFAULT_PARAMETER_LINES_FILE_NAME,
     DEFAULT_PARAMETER_LINES_PATH,
