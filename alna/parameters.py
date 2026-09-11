@@ -10,7 +10,7 @@ from subprocess import run
 from sys import executable
 from typing import Optional
 
-from base_models import DEFAULT_MODELS, EARTH_RADIUS, SolidEarthModelPart, save_base_model
+from base_models import EARTH_RADIUS, MODELS, SolidEarthModelPart, save_base_model
 from numpy import linspace, logspace, ndarray
 from pydantic import BaseModel
 
@@ -280,7 +280,7 @@ class LoveNumbersLauncher:
     To Launch multi-parameter partial integrations in parallel.
     """
 
-    name: str = DEFAULT_MODELS[SolidEarthModelPart.ELASTIC.value]
+    name: str = MODELS[SolidEarthModelPart.ELASTIC.value]
     path: Path = SOLID_EARTH_NUMERICAL_MODELS_PATH
     output_path: Path = SOLID_EARTH_NUMERICAL_MODELS_PATH
     parameter_lines_file_name: str = DEFAULT_PARAMETER_LINES_FILE_NAME

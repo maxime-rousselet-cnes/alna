@@ -5,7 +5,7 @@ All base functionalities. To test via pytest base_tests.py.
 from pathlib import Path
 from typing import Optional
 
-from base_models import DEFAULT_MODELS, SolidEarthModelPart, load_base_model, save_base_model
+from base_models import MODELS, SolidEarthModelPart, load_base_model, save_base_model
 from numpy import ndarray
 
 from alna import (
@@ -79,7 +79,7 @@ def test_load_solid_earth_parameters(
 
 
 def test_load_solid_earth_numerical_model(
-    model: str = DEFAULT_MODELS[SolidEarthModelPart.ELASTIC.value],
+    model: str = MODELS[SolidEarthModelPart.ELASTIC.value],
     name: str = "parameters",
     path: Path = PARAMETERS_SAVE_PATH,
     test_path: Path = SOLID_EARTH_NUMERICAL_MODELS_PATH,
@@ -123,7 +123,7 @@ def test_merge_solid_earth_numerical_models(
 
     if models is None:
 
-        models = DEFAULT_MODELS
+        models = MODELS
 
     elastic_profile_description = SolidEarthModelDescription(
         name=models[SolidEarthModelPart.ELASTIC.value],

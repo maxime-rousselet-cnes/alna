@@ -6,7 +6,7 @@ from argparse import ArgumentParser, Namespace
 from pathlib import Path
 from typing import Optional
 
-from base_models import DEFAULT_MODELS, MODELS, SolidEarthModelPart, load_base_model
+from base_models import MODELS, SolidEarthModelPart, load_base_model
 from numpy import array
 from pytest import Config
 
@@ -31,7 +31,7 @@ from alna import (
 
 
 def test_integrate_elastic(
-    model: str = DEFAULT_MODELS[SolidEarthModelPart.ELASTIC.value],
+    model: str = MODELS[SolidEarthModelPart.ELASTIC.value],
     name: str = "parameters",
     path: Path = PARAMETERS_SAVE_PATH,
     test_path: Path = ELASTIC_INTEGRATION_PATH,
@@ -116,7 +116,7 @@ def main_compute_love_numbers_for_gins(
 ) -> None:
     """
     Computes Love numbers of interest and their partial deriavtives for a range of candidate
-    physical models on alpha, Delta and tau_m parameters.
+    physical models on alpha, Delta and Delta' parameters.
     """
 
     compute_love_numbers_for_gins(

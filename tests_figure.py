@@ -7,8 +7,8 @@ from pathlib import Path
 from typing import Iterable, Optional
 
 from base_models import (
-    DEFAULT_MODELS,
     FIGURES_PATH,
+    MODELS,
     BoundaryCondition,
     Direction,
     SolidEarthModelPart,
@@ -43,7 +43,7 @@ FINITE_DIFFERENCES_SMOOTHER = 1
 
 
 def test_compare_plot_to_elastic_reference(
-    model: str = DEFAULT_MODELS[SolidEarthModelPart.ELASTIC.value],
+    model: str = MODELS[SolidEarthModelPart.ELASTIC.value],
     test_path: Path = ELASTIC_INTEGRATION_PATH,
     reference_love_numbers_path: Path = DEFAULT_REFERENCE_LOVE_NUMBERS_PATH,
     path: Path = FIGURES_PATH,
@@ -191,7 +191,7 @@ def test_compare_plot_viscous_to_elastic(
 
     if models is None:
 
-        models = DEFAULT_MODELS
+        models = MODELS
 
     elastic_model = load_solid_earth_numerical_model(
         name=models[SolidEarthModelPart.ELASTIC.value], path=elastic_test_path
@@ -372,7 +372,7 @@ def compare_plot_semi_analytical_partials_to_finite_differences(
 
     if models is None:
 
-        models = DEFAULT_MODELS
+        models = MODELS
 
     test_path = test_path.joinpath(parameter)
     periods_tab = array(object=load_base_model(name="periods_tab", path=test_path), dtype=float)
@@ -499,7 +499,7 @@ def plot_k_2_love_numbers_for_gins(
 
     love_numbers_for_gins_tabs, log_frequencies, elastic, anelastic, _ = load_love_numbers_for_gins(
         path=path
-    )  # (alpha, Q, Delta, tau_m, degrees, periods)
+    )  # (alpha, Q, Delta, Delta', degrees, periods)
     n_parameters = len(love_numbers_for_gins_tabs.keys())
 
     for i_axis, (parameter, parameter_values) in enumerate(love_numbers_for_gins_tabs.items()):

@@ -7,8 +7,8 @@ from shutil import rmtree
 from typing import Optional
 from uuid import uuid4
 
-from base_models import DEFAULT_MODELS, SolidEarthModelPart, load_base_model, save_base_model
-from numpy import array, logspace, ndarray, zeros
+from base_models import MODELS, SolidEarthModelPart, load_base_model, save_base_model
+from numpy import array, log10, logspace, ndarray, zeros
 from pydantic import BaseModel, ConfigDict
 
 from .constants import (
@@ -38,20 +38,20 @@ DEFAULT_FOR_GINS_OUTPUT_DIRECTORY = "for_gins"
 
 # Exponentiation base if 3-rd parameter is present.
 PARAMETERS_TO_INVERT_BOUNDS = {
-    r"\alpha^{MANTLE_0}": (0.05, 0.4),
-    r"Q_\mu^{MANTLE_0}": (
+    r"\alpha^{LOWER-MANTLE_0}": (0.05, 0.4),
+    r"Q_\mu^{LOWER-MANTLE_0}": (
         2.0,  # 100. Tomography gives ~ 300.
         4.0,  # 10000. Relation to tau_M can give a few thousands.
         10.0,
     ),
-    r"\Delta^{MANTLE_0}": (
+    r"\Delta^{LOWER-MANTLE_0}": (
         -2.0,  # Almost no transient amplitude: 0.01 times elastic.
         1.0,  # 10 times the elastic amplitude.
         10.0,
     ),
-    r"\omega_{m-inf}^{MANTLE_0}": (
-        -5.0,  # 100 000 s ~ 1.157 d. Reference at ~ 3236 s.
-        -2.0,  # 100 s.
+    r"\Delta^{UPPER-MANTLE_0}": (
+        log10(4),
+        log10(15),
         10.0,
     ),
 }
@@ -88,7 +88,7 @@ def initialize_test(models: Optional[dict[str, str]], test_path: Path) -> dict[s
 
     if models is None:
 
-        models = DEFAULT_MODELS
+        models = MODELS
 
     if test_path.exists():
 
@@ -308,7 +308,7 @@ def multi_parameter_integration(
 
     if not models:
 
-        models = DEFAULT_MODELS
+        models = MODELS
 
     profile_description = SolidEarthModelDescription(
         name=models[SolidEarthModelPart.ELASTIC.value],
