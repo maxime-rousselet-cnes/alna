@@ -18,19 +18,19 @@ from alna import (
 
 VARYING_UPPER_MANTLE_MODELS = {
     "elastic": "PREM",
-    "attenuation": "Resovsky_upper_uniform_lower",
+    "attenuation": "Resovsky",
     "transient": "unif_up_unif_low",
     "viscous": "VM7_unif_lm",
 }
-VARYING_UPPER_MANTLE_OUTPUT_DIRECTORY = "varying_um"
+VARYING_UPPER_MANTLE_OUTPUT_DIRECTORY = "varying_asth"
 
 # Exponentiation base if 3-rd parameter is present.
 VARYING_UPPER_MANTLE_PARAMETERS_TO_INVERT_BOUNDS = {
-    r"\Delta^{UPPER-MANTLE_0}": (
+    r"\Delta^{ASTHENOSPHERE_0}": (
         3,
         14,
     ),
-    r"\alpha^{UPPER-MANTLE_0}": (
+    r"\alpha^{ASTHENOSPHERE_0}": (
         0.223,
         0.297,
     ),
@@ -39,8 +39,8 @@ VARYING_UPPER_MANTLE_PARAMETERS_TO_INVERT_BOUNDS = {
         3e19,
     ),
     r"\eta_m^{LOWER-MANTLE_0}": (
-        1e22,
         1e21,
+        1e22,
     ),
 }
 

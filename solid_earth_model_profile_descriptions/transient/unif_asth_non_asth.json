@@ -1,12 +1,12 @@
 {
     "layer_names": [
-        "LOWER-MANTLE",
-        "UPPER-MANTLE",
+        "NON-ASTH-MANTLE",
+        "ASTHENOSPHERE",
         "CRUST"
     ],
     "r_limits": [
         3480000.0,
-        5701000.0,
+        6071000.0,
         6346600.0,
         6371000.0
     ],
