@@ -22,26 +22,11 @@ VARYING_UPPER_MANTLE_MODELS = {
     "transient": "unif_asth_non_asth",
     "viscous": "VM7_unif_lm",
 }
-VARYING_UPPER_MANTLE_OUTPUT_DIRECTORY = "varying_asth"
+VARYING_UPPER_MANTLE_OUTPUT_DIRECTORY = "varying_non_asth"
 
 # Exponentiation base if 3-rd parameter is present.
 VARYING_UPPER_MANTLE_PARAMETERS_TO_INVERT_BOUNDS = {
-    r"\Delta^{ASTHENOSPHERE_0}": (
-        3,
-        14,
-    ),
-    r"\alpha^{ASTHENOSPHERE_0}": (
-        0.223,
-        0.297,
-    ),
-    r"\eta_m^{MANTLE-ASTHENOSPHERE_0}": (
-        1e19,
-        3e19,
-    ),
-    r"\eta_m^{LOWER-MANTLE_0}": (
-        1e21,
-        1e22,
-    ),
+    r"\Delta^{NON-ASTH-MANTLE_0}": (-2, 1, 10.0),
 }
 
 
