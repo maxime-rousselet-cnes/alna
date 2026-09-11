@@ -435,7 +435,7 @@ def parse_multi_job_args() -> Namespace:
     add_common_mode_args(parser=submit_parser)
     submit_parser.add_argument("--job_name", default="alna_array")
     submit_parser.add_argument("--slurm_file", default="run_alna_array.sbatch")
-    submit_parser.add_argument("--walltime", default="08:00:00")
+    submit_parser.add_argument("--walltime", default="04:00:00")
     submit_parser.add_argument("--mem", default="8G")
     submit_parser.add_argument("--cpus_per_task", type=int, default=1)
     submit_parser.add_argument("--max_running", type=int, default=1000)

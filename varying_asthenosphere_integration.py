@@ -19,10 +19,10 @@ from alna import (
 VARYING_UPPER_MANTLE_MODELS = {
     "elastic": "PREM",
     "attenuation": "Resovsky_upper_uniform_lower",
-    "transient": "Post_sismo_upper_uniform_lower",
-    "viscous": "VM7_uniform_lower_mantle",
+    "transient": "unif_up_unif_low",
+    "viscous": "VM7_unif_lm",
 }
-VARYING_UPPER_MANTLE_OUTPUT_DIRECTORY = "varying_upper_mantle"
+VARYING_UPPER_MANTLE_OUTPUT_DIRECTORY = "varying_um"
 
 # Exponentiation base if 3-rd parameter is present.
 VARYING_UPPER_MANTLE_PARAMETERS_TO_INVERT_BOUNDS = {
