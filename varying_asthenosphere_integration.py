@@ -30,6 +30,10 @@ VARYING_UPPER_MANTLE_PARAMETERS_TO_INVERT_BOUNDS = {
         3,
         14,
     ),
+    r"\alpha^{UPPER-MANTLE_0}": (
+        0.223,
+        0.297,
+    ),
     r"\eta_m^{MANTLE-ASTHENOSPHERE_0}": (
         1e19,
         3e19,
