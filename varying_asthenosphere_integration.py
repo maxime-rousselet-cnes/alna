@@ -19,7 +19,7 @@ from alna import (
 VARYING_UPPER_MANTLE_MODELS = {
     "elastic": "PREM",
     "attenuation": "Resovsky",
-    "transient": "unif_up_unif_low",
+    "transient": "unif_asth_non_asth",
     "viscous": "VM7_unif_lm",
 }
 VARYING_UPPER_MANTLE_OUTPUT_DIRECTORY = "varying_asth"
