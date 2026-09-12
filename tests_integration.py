@@ -28,6 +28,7 @@ from alna import (
     verify_solid_earth_numerical_model_consistency,
     viscous_model_integration_test,
 )
+from varying_asthenosphere_integration import VARYING_MANTLE_MODELS
 
 
 def test_integrate_elastic(
@@ -168,5 +169,5 @@ if __name__ == "__main__":
             "n_periods": args.n_periods,
         },
         degrees=[2],
-        models=MODELS,
+        models=VARYING_MANTLE_MODELS,
     )

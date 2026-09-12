@@ -16,6 +16,7 @@ from alna import (
     ELASTIC_PERIOD_TAB,
     SOLID_EARTH_NUMERICAL_MODELS_PATH,
     load_solid_earth_numerical_model,
+    tide_correction_model_generation,
 )
 
 

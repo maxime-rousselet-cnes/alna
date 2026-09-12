@@ -64,6 +64,7 @@ from .solid_earth_model import (
     compose_name_with_invertible_parameters,
     format_name_function,
 )
+from .tide_correction_model import tide_correction_model_generation
 
 to_import = [
     LOG10_PERIOD_LOWER_BOUND,
@@ -99,6 +100,7 @@ to_import = [
     partials_per_parameter_integration_tests,
     verify_solid_earth_numerical_model_consistency,
     viscous_model_integration_test,
+    tide_correction_model_generation,
     load_solid_earth_numerical_model,
     MODELS,
     TO_GET_INVERSE_DERIVATIVES,
