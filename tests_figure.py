@@ -25,9 +25,9 @@ from alna import (
     COMPLEX_PARTS,
     DEFAULT_REFERENCE_LOVE_NUMBERS_PATH,
     ELASTIC_INTEGRATION_PATH,
-    PARAMETERS_TO_INVERT_BOUNDS,
     SOLID_EARTH_NUMERICAL_MODEL_PART_NAMES_SEPARATOR,
     SOLID_EARTH_NUMERICAL_MODELS_PATH,
+    VARYING_MANTLE_PARAMETERS_TO_INVERT_BOUNDS,
     VISCOUS_INTEGRATION_PATH,
     ComponentParameters,
     build_base_name,
@@ -412,7 +412,7 @@ def test_compare_plot_semi_analytical_partials_to_finite_differences(
         parameter=r"\eta_m^{UPPER-MANTLE_0}",
     )
 
-    for parameter in PARAMETERS_TO_INVERT_BOUNDS:
+    for parameter in VARYING_MANTLE_PARAMETERS_TO_INVERT_BOUNDS:
 
         compare_plot_semi_analytical_partials_to_finite_differences(
             models=models,

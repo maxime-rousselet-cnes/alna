@@ -25,9 +25,12 @@ from .load_solid_earth_model import load_solid_earth_numerical_model
 
 LOG10_PERIOD_LOWER_BOUND = -2  # (yr).
 LOG10_PERIOD_UPPER_BOUND = 4  # (yr). TODO.
-TO_GET_INVERSE_DERIVATIVES = {r"\omega_{m-inf}^{MANTLE_0}": r"\tau_{m-inf}^{MANTLE_0}"}
+TO_GET_INVERSE_DERIVATIVES = {}
 GOT_INVERSE_DERIVATIVES = {v: k for k, v in TO_GET_INVERSE_DERIVATIVES.items()}
-TO_GET_LOG_DERIVATIVES = [r"Q_\mu^{MANTLE_0}", r"\Delta^{MANTLE_0}", r"\tau_{m-inf}^{MANTLE_0}"]
+TO_GET_LOG_DERIVATIVES = [
+    r"\Delta^{ASTHENOSPHERE_0}",
+    r"\Delta^{NON-ASTH-MANTLE_0}",
+]
 
 
 def compute_love_numbers_for_gins(

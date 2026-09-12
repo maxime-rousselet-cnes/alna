@@ -137,6 +137,10 @@ def append_common_cli_args(cmd: list[str], args: Namespace) -> None:
 
         cmd.append("--not_compute_partials")
 
+    if args.not_compute_tides:
+
+        cmd.append("--not_compute_tides")
+
     if args.not_format_name:
 
         cmd.append("--not_format_name")

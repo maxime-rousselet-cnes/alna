@@ -26,7 +26,7 @@ from .constants import (
 from .integration_loops import (
     DEFAULT_FOR_GINS_OUTPUT_DIRECTORY,
     NUMERICAL_TOLERANCE,
-    PARAMETERS_TO_INVERT_BOUNDS,
+    VARYING_MANTLE_PARAMETERS_TO_INVERT_BOUNDS,
     VISCOUS_INTEGRATION_PATH,
     MultiParametersLoop,
     build_parameter_tab_parametrization,
@@ -92,7 +92,7 @@ to_import = [
     save_figure,
     DEFAULT_FOR_GINS_OUTPUT_DIRECTORY,
     NUMERICAL_TOLERANCE,
-    PARAMETERS_TO_INVERT_BOUNDS,
+    VARYING_MANTLE_PARAMETERS_TO_INVERT_BOUNDS,
     VISCOUS_INTEGRATION_PATH,
     initialize_test,
     load_reference_love_numbers_for_validation,
@@ -118,4 +118,5 @@ to_import = [
     SolidEarthNumericalModel,
     compose_name_with_invertible_parameters,
     format_name_function,
+    VARYING_MANTLE_PARAMETERS_TO_INVERT_BOUNDS,
 ]

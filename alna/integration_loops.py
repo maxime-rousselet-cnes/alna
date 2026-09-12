@@ -37,23 +37,17 @@ DEFAULT_BASE_COMMAND = ["--compute_partials", "--force_viscous", "--force_transi
 DEFAULT_FOR_GINS_OUTPUT_DIRECTORY = "for_gins"
 
 # Exponentiation base if 3-rd parameter is present.
-PARAMETERS_TO_INVERT_BOUNDS = {
-    r"\alpha^{LOWER-MANTLE_0}": (0.05, 0.4),
-    r"Q_\mu^{LOWER-MANTLE_0}": (
-        2.0,  # 100. Tomography gives ~ 300.
-        4.0,  # 10000. Relation to tau_M can give a few thousands.
-        10.0,
-    ),
-    r"\Delta^{LOWER-MANTLE_0}": (
-        -2.0,  # Almost no transient amplitude: 0.01 times elastic.
-        1.0,  # 10 times the elastic amplitude.
-        10.0,
-    ),
-    r"\Delta^{UPPER-MANTLE_0}": (
-        log10(4),
-        log10(15),
-        10.0,
-    ),
+VARYING_MANTLE_PARAMETERS_TO_INVERT_BOUNDS = {
+    r"\alpha^{ASTHENOSPHERE_0}": (0.2, 0.3),
+    r"\Delta^{ASTHENOSPHERE_0}": (4, 15),
+    r"\alpha^{NON-ASTH-MANTLE_0}": (0.05, 0.4),
+    r"\Delta^{NON-ASTH-MANTLE_0}": (-2, log10(0.5), 10.0),
+}
+NAMES_MAP = {
+    r"\alpha^{ASTHENSPHERE_0}": "lam",
+    r"\alpha^{NON-ASTH-MANTLE_0}": "lqm",
+    r"\log_{10}\Delta^{ASTHENOSPHERE_0}": "ldm",
+    r"\log_{10}\Delta^{NON-ASTH-MANTLE_0}": "ltm",
 }
 
 
@@ -69,7 +63,7 @@ def build_parameter_tab_parametrization(
 
     if parameter_to_invert_bounds is None:
 
-        parameter_to_invert_bounds = PARAMETERS_TO_INVERT_BOUNDS
+        parameter_to_invert_bounds = VARYING_MANTLE_PARAMETERS_TO_INVERT_BOUNDS
 
     return {
         parameter: (
@@ -254,7 +248,7 @@ def viscous_model_integration_test(
             parameter_lines_file_name="viscous",
             period_tab_per_degree_file_name="viscous",
         ),
-        base_command=["--not_compute_partials", "--force_viscous"],
+        base_command=["--not_compute_partials", "--force_viscous", "--not_compute_tides"],
     )
 
 

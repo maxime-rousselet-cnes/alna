@@ -86,6 +86,11 @@ def parse_general_args(parser: ArgumentParser) -> None:
     parser.add_argument(
         "--not_format_name", action="store_true", help="Do not format name with parts and options."
     )
+    parser.add_argument(
+        "--not_compute_tides",
+        action="store_true",
+        help="Prevents from getting k_2-related solid Earth tides and pole tide effects for POD.",
+    )
 
 
 def parse_single_job_args() -> Namespace:
@@ -174,6 +179,12 @@ def love_numbers_single_run_main(
         path=solid_earth_numerical_models_path if not args.output_path else Path(args.output_path),
         format_name=not args.not_format_name if args.not_format_name else True,
     )
+
+    if not args.not_compute_tides:
+
+        tide_correction_model_generation(
+            file_path=Path(args.output_path).joinpath(solid_earth_numerical_model.name)
+        )
 
 
 if __name__ == "__main__":

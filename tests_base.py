@@ -199,7 +199,7 @@ def test_check_anelastic_settings(
                     love_numbers_launcher=LoveNumbersLauncher(
                         name=initial_name, path=test_path.parent, output_path=test_path
                     ),
-                    base_command=["--not_compute_partials"],
+                    base_command=["--not_compute_partials", "--not_compute_tides"],
                 )
 
 

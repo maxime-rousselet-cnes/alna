@@ -2,12 +2,12 @@
     "layer_names": [
         "NON-ASTH-MANTLE",
         "ASTHENOSPHERE",
-        "CRUST"
+        "LITHOSPHERE"
     ],
     "r_limits": [
         3480000.0,
         6071000.0,
-        6346600.0,
+        6271600.0,
         6371000.0
     ],
     "optional_crust_values": null,

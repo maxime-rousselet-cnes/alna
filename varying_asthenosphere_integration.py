@@ -11,6 +11,7 @@ from pytest import Config
 from alna import (
     LOG10_PERIOD_LOWER_BOUND,
     LOG10_PERIOD_UPPER_BOUND,
+    VARYING_MANTLE_PARAMETERS_TO_INVERT_BOUNDS,
     MultiParametersLoop,
     build_parameter_tab_parametrization,
     multi_parameter_integration,
@@ -26,17 +27,11 @@ VARYING_BIASING_PARAMETERS_OUTPUT_DIRECTORY = "varying_biasing"
 VARYING_MANTLE_PARAMETERS_OUTPUT_DIRECTORY = "varying_mantle"
 
 # Exponentiation base if 3-rd parameter is present.
-VARYING_BIASING_PARAMETERS_TO_INVERT_BOUNDS = {
+VARYING_BIASING_VARYING_MANTLE_PARAMETERS_TO_INVERT_BOUNDS = {
     r"\alpha^{ASTHENOSPHERE_0}": (0.2, 0.3),
     r"\Delta^{ASTHENOSPHERE_0}": (4, 15),
     r"\eta_m^{MANTLE-ASTHENOSPHERE_0}": (2e19, 3e19),
     r"\eta_m^{LOWER-MANTLE_0}": (21, 22, 10.0),
-}
-VARYING_NANTLE_PARAMETERS_TO_INVERT_BOUNDS = {
-    r"\alpha^{ASTHENOSPHERE_0}": (0.2, 0.3),
-    r"\Delta^{ASTHENOSPHERE_0}": (4, 15),
-    r"\alpha^{NON-ASTH-MANTLE_0}": (0.1, 0.4),
-    r"\Delta^{NON-ASTH-MANTLE_0}": (-2, -0.3, 10.0),
 }
 
 
@@ -61,7 +56,7 @@ def compute_love_numbers_for_varying_mantle(
             ),
             parameters=build_parameter_tab_parametrization(
                 n_parameter_values=test_config["n_parameter_values"],
-                parameter_to_invert_bounds=VARYING_BIASING_PARAMETERS_TO_INVERT_BOUNDS,
+                parameter_to_invert_bounds=VARYING_BIASING_VARYING_MANTLE_PARAMETERS_TO_INVERT_BOUNDS,
             ),
             output_directory=VARYING_BIASING_PARAMETERS_OUTPUT_DIRECTORY,
         ),
@@ -80,7 +75,7 @@ def compute_love_numbers_for_varying_mantle(
             ),
             parameters=build_parameter_tab_parametrization(
                 n_parameter_values=test_config["n_parameter_values"],
-                parameter_to_invert_bounds=VARYING_NANTLE_PARAMETERS_TO_INVERT_BOUNDS,
+                parameter_to_invert_bounds=VARYING_MANTLE_PARAMETERS_TO_INVERT_BOUNDS,
             ),
             output_directory=VARYING_MANTLE_PARAMETERS_OUTPUT_DIRECTORY,
         ),
