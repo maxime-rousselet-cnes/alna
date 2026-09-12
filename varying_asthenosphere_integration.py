@@ -16,36 +16,38 @@ from alna import (
     multi_parameter_integration,
 )
 
-VARYING_UPPER_MANTLE_MODELS = {
+VARYING_MANTLE_MODELS = {
     "elastic": "PREM",
     "attenuation": "Resovsky",
     "transient": "unif_asth_non_asth",
     "viscous": "VM7_unif_lm",
 }
-VARYING_UPPER_MANTLE_OUTPUT_DIRECTORY = "varying_non_asth"
+VARYING_BIASING_PARAMETERS_OUTPUT_DIRECTORY = "varying_biasing"
+VARYING_MANTLE_PARAMETERS_OUTPUT_DIRECTORY = "varying_mantle"
 
 # Exponentiation base if 3-rd parameter is present.
-VARYING_UPPER_MANTLE_PARAMETERS_TO_INVERT_BOUNDS = {
-    r"\Delta^{NON-ASTH-MANTLE_0}": (-1.5, 0, 10.0),
-    r"\Delta^{ASTHENOSPHERE_0}": (3, 15),
+VARYING_BIASING_PARAMETERS_TO_INVERT_BOUNDS = {
     r"\alpha^{NON-ASTH-MANTLE_0}": (0.2, 0.3),
+    r"\Delta^{ASTHENOSPHERE_0}": (4, 15),
+    r"\eta_m^{MANTLE-ASTHENOSPHERE_0}": (2e19, 3e19),
+    r"\eta_m^{LOWER-MANTLE_0}": (21, 22, 10.0),
+}
+VARYING_NANTLE_PARAMETERS_TO_INVERT_BOUNDS = {
     r"\alpha^{ASTHENOSPHERE_0}": (0.2, 0.3),
+    r"\Delta^{ASTHENOSPHERE_0}": (4, 15),
+    r"\alpha^{NON-ASTH-MANTLE_0}": (0.2, 0.3),
+    r"\Delta^{NON-ASTH-MANTLE_0}": (-2, -0.3, 10.0),
 }
 
 
-def compute_love_numbers_for_varying_upper_mantle(
+def compute_love_numbers_for_varying_mantle(
     test_config: Config | dict[str, int | bool],
     degrees: Optional[list[int]] = None,
     models: Optional[dict[str, str]] = None,
 ) -> None:
     """
-    Computes Love numbers of interest and their partial deriavtives for a range
-    of asthenospheric variations.
+    Computes Love numbers of interest and their partial deriavtives for a range of variations.
     """
-
-    if not models:
-
-        models = VARYING_UPPER_MANTLE_MODELS
 
     multi_parameter_integration(
         account=test_config["account"],
@@ -59,9 +61,28 @@ def compute_love_numbers_for_varying_upper_mantle(
             ),
             parameters=build_parameter_tab_parametrization(
                 n_parameter_values=test_config["n_parameter_values"],
-                parameter_to_invert_bounds=VARYING_UPPER_MANTLE_PARAMETERS_TO_INVERT_BOUNDS,
+                parameter_to_invert_bounds=VARYING_BIASING_PARAMETERS_TO_INVERT_BOUNDS,
             ),
-            output_directory=VARYING_UPPER_MANTLE_OUTPUT_DIRECTORY,
+            output_directory=VARYING_BIASING_PARAMETERS_OUTPUT_DIRECTORY,
+        ),
+        models=models,
+    )
+
+    multi_parameter_integration(
+        account=test_config["account"],
+        multi_parameter_love_numbers_loop=MultiParametersLoop(
+            degrees=degrees if degrees else [2],
+            periods=logspace(
+                start=LOG10_PERIOD_LOWER_BOUND,
+                stop=LOG10_PERIOD_UPPER_BOUND,
+                num=test_config["n_periods"],
+                base=10,
+            ),
+            parameters=build_parameter_tab_parametrization(
+                n_parameter_values=test_config["n_parameter_values"],
+                parameter_to_invert_bounds=VARYING_NANTLE_PARAMETERS_TO_INVERT_BOUNDS,
+            ),
+            output_directory=VARYING_MANTLE_PARAMETERS_OUTPUT_DIRECTORY,
         ),
         models=models,
     )
@@ -100,12 +121,12 @@ def parse_args() -> Namespace:
 if __name__ == "__main__":
 
     args = parse_args()
-    compute_love_numbers_for_varying_upper_mantle(
+    compute_love_numbers_for_varying_mantle(
         test_config={
             "account": args.account,
             "n_parameter_values": args.n_parameter_values,
             "n_periods": args.n_periods,
         },
         degrees=[2],
-        models=VARYING_UPPER_MANTLE_MODELS,
+        models=VARYING_MANTLE_MODELS,
     )
