@@ -35,7 +35,7 @@ VARYING_BIASING_PARAMETERS_TO_INVERT_BOUNDS = {
 VARYING_NANTLE_PARAMETERS_TO_INVERT_BOUNDS = {
     r"\alpha^{ASTHENOSPHERE_0}": (0.2, 0.3),
     r"\Delta^{ASTHENOSPHERE_0}": (4, 15),
-    r"\alpha^{NON-ASTH-MANTLE_0}": (0.2, 0.3),
+    r"\alpha^{NON-ASTH-MANTLE_0}": (0.1, 0.4),
     r"\Delta^{NON-ASTH-MANTLE_0}": (-2, -0.3, 10.0),
 }
 
