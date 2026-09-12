@@ -26,7 +26,10 @@ VARYING_UPPER_MANTLE_OUTPUT_DIRECTORY = "varying_non_asth"
 
 # Exponentiation base if 3-rd parameter is present.
 VARYING_UPPER_MANTLE_PARAMETERS_TO_INVERT_BOUNDS = {
-    r"\Delta^{NON-ASTH-MANTLE_0}": (-2, 1, 10.0),
+    r"\Delta^{NON-ASTH-MANTLE_0}": (-1.5, 0, 10.0),
+    r"\Delta^{ASTHENOSPHERE_0}": (3, 15),
+    r"\Delta^{NON-ASTH-MANTLE_0}": (0.2, 0.3),
+    r"\Delta^{ASTHENOSPHERE_0}": (0.2, 0.3),
 }
 
 
