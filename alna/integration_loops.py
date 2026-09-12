@@ -44,7 +44,7 @@ VARYING_MANTLE_PARAMETERS_TO_INVERT_BOUNDS = {
     r"\Delta^{NON-ASTH-MANTLE_0}": (-2, log10(0.5), 10.0),
 }
 NAMES_MAP = {
-    r"\alpha^{ASTHENSPHERE_0}": "lam",
+    r"\alpha^{ASTHENOSPHERE_0}": "lam",
     r"\alpha^{NON-ASTH-MANTLE_0}": "lqm",
     r"\log_{10}\Delta^{ASTHENOSPHERE_0}": "ldm",
     r"\log_{10}\Delta^{NON-ASTH-MANTLE_0}": "ltm",
