@@ -27,7 +27,7 @@ VARYING_MANTLE_PARAMETERS_OUTPUT_DIRECTORY = "varying_mantle"
 
 # Exponentiation base if 3-rd parameter is present.
 VARYING_BIASING_PARAMETERS_TO_INVERT_BOUNDS = {
-    r"\alpha^{NON-ASTH-MANTLE_0}": (0.2, 0.3),
+    r"\alpha^{ASTHENOSPHERE_0}": (0.2, 0.3),
     r"\Delta^{ASTHENOSPHERE_0}": (4, 15),
     r"\eta_m^{MANTLE-ASTHENOSPHERE_0}": (2e19, 3e19),
     r"\eta_m^{LOWER-MANTLE_0}": (21, 22, 10.0),
