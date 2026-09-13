@@ -40,8 +40,8 @@ DEFAULT_FOR_GINS_OUTPUT_DIRECTORY = "for_gins"
 VARYING_MANTLE_PARAMETERS_TO_INVERT_BOUNDS = {
     r"\alpha^{ASTHENOSPHERE_0}": (0.2, 0.3),
     r"\Delta^{ASTHENOSPHERE_0}": (4, 15),
-    r"\alpha^{NON-ASTH-MANTLE_0}": (0.01, 0.35),
-    r"\Delta^{NON-ASTH-MANTLE_0}": (log10(0.05), 0, 10.0),
+    r"\alpha^{NON-ASTH-MANTLE_0}": (0.05, 0.35),
+    r"\Delta^{NON-ASTH-MANTLE_0}": (-2, 1, 10.0),
 }
 NAMES_MAP = {
     r"\alpha^{ASTHENOSPHERE_0}": "lam",

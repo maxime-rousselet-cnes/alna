@@ -39,29 +39,32 @@ def compute_love_numbers_for_varying_mantle(
     test_config: Config | dict[str, int | bool],
     degrees: Optional[list[int]] = None,
     models: Optional[dict[str, str]] = None,
+    biasing_models: bool = False,
 ) -> None:
     """
     Computes Love numbers of interest and their partial deriavtives for a range of variations.
     """
 
-    multi_parameter_integration(
-        account=test_config["account"],
-        multi_parameter_love_numbers_loop=MultiParametersLoop(
-            degrees=degrees if degrees else [2],
-            periods=logspace(
-                start=LOG10_PERIOD_LOWER_BOUND,
-                stop=LOG10_PERIOD_UPPER_BOUND,
-                num=test_config["n_periods"],
-                base=10,
+    if biasing_models:
+
+        multi_parameter_integration(
+            account=test_config["account"],
+            multi_parameter_love_numbers_loop=MultiParametersLoop(
+                degrees=degrees if degrees else [2],
+                periods=logspace(
+                    start=LOG10_PERIOD_LOWER_BOUND,
+                    stop=LOG10_PERIOD_UPPER_BOUND,
+                    num=test_config["n_periods"],
+                    base=10,
+                ),
+                parameters=build_parameter_tab_parametrization(
+                    n_parameter_values=test_config["n_parameter_values"],
+                    parameter_to_invert_bounds=VARYING_BIASING_VARYING_MANTLE_PARAMETERS_TO_INVERT_BOUNDS,
+                ),
+                output_directory=VARYING_BIASING_PARAMETERS_OUTPUT_DIRECTORY,
             ),
-            parameters=build_parameter_tab_parametrization(
-                n_parameter_values=test_config["n_parameter_values"],
-                parameter_to_invert_bounds=VARYING_BIASING_VARYING_MANTLE_PARAMETERS_TO_INVERT_BOUNDS,
-            ),
-            output_directory=VARYING_BIASING_PARAMETERS_OUTPUT_DIRECTORY,
-        ),
-        models=models,
-    )
+            models=models,
+        )
 
     multi_parameter_integration(
         account=test_config["account"],
@@ -124,4 +127,5 @@ if __name__ == "__main__":
         },
         degrees=[2],
         models=VARYING_MANTLE_MODELS,
+        biasing_models=False,
     )
