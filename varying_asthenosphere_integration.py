@@ -11,17 +11,24 @@ from pytest import Config
 from alna import (
     LOG10_PERIOD_LOWER_BOUND,
     LOG10_PERIOD_UPPER_BOUND,
+    MODELS,
     VARYING_MANTLE_PARAMETERS_TO_INVERT_BOUNDS,
     MultiParametersLoop,
     build_parameter_tab_parametrization,
     multi_parameter_integration,
 )
 
-VARYING_MANTLE_MODELS = {
+VARYING_BIASING_MODELS = {
     "elastic": "PREM",
     "attenuation": "Resovsky",
     "transient": "unif_asth_non_asth",
     "viscous": "VM7_unif_lm",
+}
+VARYING_MANTLE_MODELS = {
+    "elastic": "PREM",
+    "attenuation": "Resovsky",
+    "transient": "unif_asth_non_asth",
+    "viscous": "VM7_lvz",
 }
 VARYING_BIASING_PARAMETERS_OUTPUT_DIRECTORY = "varying_biasing"
 VARYING_MANTLE_PARAMETERS_OUTPUT_DIRECTORY = "varying_mantle"
