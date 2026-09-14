@@ -67,7 +67,7 @@ def compute_love_numbers_for_varying_mantle(
             ),
             output_directory=VARYING_BIASING_PARAMETERS_OUTPUT_DIRECTORY,
         ),
-        models=models,
+        models=VARYING_BIASING_MODELS,
     )
 
     if varying_models:
