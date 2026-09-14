@@ -11,7 +11,6 @@ from pytest import Config
 from alna import (
     LOG10_PERIOD_LOWER_BOUND,
     LOG10_PERIOD_UPPER_BOUND,
-    MODELS,
     VARYING_MANTLE_PARAMETERS_TO_INVERT_BOUNDS,
     MultiParametersLoop,
     build_parameter_tab_parametrization,
