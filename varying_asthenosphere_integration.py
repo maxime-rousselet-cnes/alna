@@ -133,5 +133,5 @@ if __name__ == "__main__":
         },
         degrees=[2],
         models=VARYING_MANTLE_MODELS,
-        varying_models=False,
+        varying_models=True,
     )
