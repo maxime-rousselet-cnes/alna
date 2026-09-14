@@ -690,10 +690,10 @@ def save_tabs(
     Verifies lecture consistency.
     """
 
-    lam_values = INVERTED_NAMES_MAP["lam"]
-    lqm_values = INVERTED_NAMES_MAP["lqm"]
-    ldm_values = INVERTED_NAMES_MAP["ldm"]
-    ltm_values = INVERTED_NAMES_MAP["ltm"]
+    lam_values = tabs[INVERTED_NAMES_MAP["lam"]]
+    lqm_values = tabs[INVERTED_NAMES_MAP["lqm"]]
+    ldm_values = tabs[INVERTED_NAMES_MAP["ldm"]]
+    ltm_values = tabs[INVERTED_NAMES_MAP["ltm"]]
     model_jjul_dates = dates_to_jjul_dates(dates=dates)
     model_mask = (model_jjul_dates >= DATA_DATES_LOWER_BOUND - DATA_DATES_MARGIN) & (
         model_jjul_dates <= DATA_DATES_UPPER_BOUND + DATA_DATES_MARGIN
