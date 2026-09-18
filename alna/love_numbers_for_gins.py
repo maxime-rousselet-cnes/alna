@@ -194,18 +194,6 @@ def get_tabs_from_all_love_number_files(
     return {parameter: sort(unique(tab)) for parameter, tab in parameter_tabs.items()}
 
 
-def modify(parameter: str, value: float) -> float:
-    """
-    TODO: describe.
-    """
-
-    return (
-        (log(1 / value) if parameter in TO_GET_LOG_DERIVATIVES else 1 / value)
-        if parameter in TO_GET_INVERSE_DERIVATIVES
-        else (log(value) if parameter in TO_GET_LOG_DERIVATIVES else value)
-    )
-
-
 def flip_love_numbers_and_partials(
     love_numbers_for_gins_tabs: dict[str, ndarray],
     love_numbers: ndarray,

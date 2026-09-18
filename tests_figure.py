@@ -274,19 +274,21 @@ def load_love_numbers_for_partials_plot(
             path=test_path,
         )
         love_numbers[:, :, i_parameter] = (
-            solid_earth_numerical_model.love_numbers["real"][2][:, BoundaryCondition.LOAD.value, :]
+            solid_earth_numerical_model.love_numbers["real"][2][
+                :, BoundaryCondition.POTENTIAL.value, :
+            ]
             + 1j
             * solid_earth_numerical_model.love_numbers["imag"][2][
-                :, BoundaryCondition.LOAD.value, :
+                :, BoundaryCondition.POTENTIAL.value, :
             ]
         )
         love_number_partials[:, :, i_parameter] = (
             solid_earth_numerical_model.love_number_partials["real"][parameter][2][
-                :, BoundaryCondition.LOAD.value, :
+                :, BoundaryCondition.POTENTIAL.value, :
             ]
             + 1j
             * solid_earth_numerical_model.love_number_partials["imag"][parameter][2][
-                :, BoundaryCondition.LOAD.value, :
+                :, BoundaryCondition.POTENTIAL.value, :
             ]
         )
 
@@ -304,7 +306,7 @@ def plot_love_number_partials(
     Plots love number partials against finite differences.
     """
 
-    for ax_line, label, direction in zip(axes, "hlk", Direction):
+    for ax_line, label, direction in zip([axes], "k", [Direction.POTENTIAL]):
 
         for ax, part in zip(ax_line, COMPLEX_PARTS):
 
@@ -317,7 +319,7 @@ def plot_love_number_partials(
                         if part == "real"
                         else love_number_partials[i_period, direction.value, :].imag
                     ),
-                    label=f"{period:.1f} yr" if label == "h" and part == "real" else "",
+                    label=f"{period:.1f} yr" if part == "real" else "",
                     linestyle="-",
                     linewidth=2,
                 )
@@ -343,21 +345,18 @@ def plot_love_number_partials(
 
                 if part == "real":
 
-                    ax.set_ylabel(r"$\frac{\partial " + label + r"'_2}{\partial p}$")
+                    ax.set_ylabel(r"$\frac{\partial " + label + r"_2}{\partial \Delta^{MANTLE_0}}$")
                     ax.tick_params(labelbottom=False)
 
-                if label == "k":
+                ax.grid()
+                ax.tick_params(labelbottom=True)
+                ax.set_xlabel(r"$\Delta^{MANTLE_0}$")
 
-                    ax.tick_params(labelbottom=True)
-                    ax.set_xlabel(r"$p$")
+                if part == "real":
 
-                elif label == "h":
+                    ax.legend()
 
-                    if part == "real":
-
-                        ax.legend()
-
-                    ax.set_title("Real part" if part == "real" else "Imaginary part")
+                ax.set_title("Real part" if part == "real" else "Imaginary part")
 
 
 def compare_plot_semi_analytical_partials_to_finite_differences(
@@ -382,7 +381,7 @@ def compare_plot_semi_analytical_partials_to_finite_differences(
         periods_tab=periods_tab,
         parameter=parameter,
     )
-    figure, axes = subplots(3, 2, figsize=(7, 12), sharex=True)
+    figure, axes = subplots(1, 2, figsize=(8, 4), sharex=True)
     suptitle("        $" + parameter + "$ partials")
     plot_love_number_partials(
         axes=axes,
@@ -412,7 +411,7 @@ def test_compare_plot_semi_analytical_partials_to_finite_differences(
         parameter=r"\eta_m^{UPPER-MANTLE_0}",
     )
 
-    for parameter in VARYING_MANTLE_PARAMETERS_TO_INVERT_BOUNDS:
+    for parameter in [r"\Delta^{MANTLE_0}"]:
 
         compare_plot_semi_analytical_partials_to_finite_differences(
             models=models,
@@ -537,4 +536,11 @@ def plot_k_2_love_numbers_for_gins(
 
 if __name__ == "__main__":
 
-    plot_k_2_love_numbers_for_gins()
+    test_compare_plot_semi_analytical_partials_to_finite_differences(
+        models={
+            "elastic": "PREM",
+            "attenuation": "uniform",
+            "transient": "reference",
+            "viscous": "uniform",
+        }
+    )

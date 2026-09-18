@@ -211,7 +211,7 @@ def save_figure(figure: Figure, figure_title: str, path: Path = FIGURES_PATH) ->
 
     path.mkdir(exist_ok=True, parents=True)
 
-    for file_format in ["svg", "png"]:
+    for file_format in ["pdf", "png"]:
 
         figure.savefig(fname=path.joinpath(figure_title + "." + file_format), format=file_format)
         figure.savefig(fname=path.joinpath(figure_title + "." + file_format), format=file_format)

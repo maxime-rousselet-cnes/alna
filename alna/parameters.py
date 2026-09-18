@@ -262,6 +262,9 @@ def generate_parameter_lines(
             all_parameter_values[parameter] = logspace(
                 start=start, stop=stop, num=int(num), base=base
             )
+        all_parameter_values[parameter] = [
+            float(f"{value:.2e}") for value in all_parameter_values[parameter]
+        ]
 
     if write:
 
