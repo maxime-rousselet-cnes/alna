@@ -44,7 +44,6 @@ VARYING_BIASING_VARYING_MANTLE_PARAMETERS_TO_INVERT_BOUNDS = {
 def compute_love_numbers_for_varying_mantle(
     test_config: Config | dict[str, int | bool],
     degrees: Optional[list[int]] = None,
-    models: Optional[dict[str, str]] = None,
     varying_models: bool = False,
 ) -> None:
     """
@@ -88,7 +87,7 @@ def compute_love_numbers_for_varying_mantle(
                 ),
                 output_directory=VARYING_MANTLE_PARAMETERS_OUTPUT_DIRECTORY,
             ),
-            models=models,
+            models=VARYING_MANTLE_MODELS,
         )
 
 
@@ -132,6 +131,5 @@ if __name__ == "__main__":
             "n_periods": args.n_periods,
         },
         degrees=[2],
-        models=VARYING_MANTLE_MODELS,
         varying_models=True,
     )
