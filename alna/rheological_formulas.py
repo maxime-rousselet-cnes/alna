@@ -415,28 +415,27 @@ def solid_to_fluid(
     y_1: ndarray, y_2: ndarray, y_3: ndarray, rho_0_fluid_inf: float, g_0_fluid_inf: float
 ) -> ndarray:
     """
-    Converts the y_i system solution at a fluid/solid interface.
-    To call for the first fluid layer.
+    Converts three solid basis solutions to one fluid solution.
     """
 
-    k_1_3 = y_1[3] / y_3[3]
-    k_2_3 = y_2[3] / y_3[3]
-    k_numerator = (
-        g_0_fluid_inf * (y_1[0] + y_3[0] * k_1_3)
-        - (y_1[4] + y_3[4] * k_1_3)
-        + (1.0 / rho_0_fluid_inf) * (y_1[1] + y_3[1] * k_1_3)
-    )
-    k_denominator = (
-        g_0_fluid_inf * (y_2[0] + y_3[0] * k_2_3)
-        - (y_2[4] + y_3[4] * k_2_3)
-        + (1.0 / rho_0_fluid_inf) * (y_2[1] + y_3[1] * k_2_3)
-    )
-    k_k = k_numerator / k_denominator
-    sol_2 = y_1[1] + k_k * y_2[1] + (k_1_3 + k_k * k_2_3) * y_3[1]
-    sol_5 = y_1[4] + k_k * y_2[4] + (k_1_3 + k_k * k_2_3) * y_3[4]
-    sol_6 = y_1[5] + k_k * y_2[5] + (k_1_3 + k_k * k_2_3) * y_3[5]
+    rho = rho_0_fluid_inf
+    g = g_0_fluid_inf
+    k_1_3 = -y_1[3] / y_3[3]
+    k_2_3 = -y_2[3] / y_3[3]
+    basis_1 = y_1 + k_1_3 * y_3
+    basis_2 = y_2 + k_2_3 * y_3
+    q_1 = g * basis_1[0] - basis_1[4] - basis_1[1] / rho
+    q_2 = g * basis_2[0] - basis_2[4] - basis_2[1] / rho
+    k_k = -q_1 / q_2
+    solid = basis_1 + k_k * basis_2
 
-    return array([sol_5, sol_6 + (4.0 / g_0_fluid_inf) * sol_2], dtype=complex)
+    return array(
+        [
+            solid[4],
+            solid[5] + (4.0 / g) * solid[1],
+        ],
+        dtype=complex,
+    )
 
 
 def fluid_to_solid(
