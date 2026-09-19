@@ -21,6 +21,7 @@ from numpy import (
     asarray,
     conjugate,
     dtype,
+    einsum,
     flip,
     fromfile,
     log,
@@ -561,6 +562,68 @@ def load_tide_correction_models(
     return log_inverted_tabs, all_correction_models
 
 
+def replace_ltm_partials_with_global_lagrange_derivatives(
+    ltm_values: ndarray,
+    correction_models: dict[str, ndarray],
+) -> None:
+    """
+    Replaces the formal ltm partial derivatives by numerical derivatives
+    obtained from the global degree-8 Lagrange polynomial through all
+    9 ltm grid points.
+    The function modifies correction_models in place.
+    """
+
+    ltm_values = asarray(a=ltm_values, dtype=float)
+    n_ltm = len(ltm_values)
+    barycentric_weights = zeros(n_ltm, dtype=float)
+
+    for j in range(n_ltm):
+
+        barycentric_weights[j] = 1.0
+
+        for m in range(n_ltm):
+
+            if m != j:
+
+                barycentric_weights[j] /= ltm_values[j] - ltm_values[m]
+
+    differentiation_matrix = zeros((n_ltm, n_ltm), dtype=float)
+
+    for i in range(n_ltm):
+
+        for j in range(n_ltm):
+
+            if i != j:
+
+                differentiation_matrix[i, j] = (
+                    barycentric_weights[j]
+                    / barycentric_weights[i]
+                    / (ltm_values[i] - ltm_values[j])
+                )
+
+        differentiation_matrix[i, i] = -sum(differentiation_matrix[i])
+
+    for partial_name, model_name in zip(
+        [
+            "k2_ltm_real",
+            "k2_ltm_imag",
+            "C_ltm",
+            "S_ltm",
+        ],
+        [
+            "k2_real",
+            "k2_imag",
+            "C",
+            "S",
+        ],
+    ):
+
+        model = correction_models[model_name]
+        model_ltm_last = model.swapaxes(3, -1)
+        derivative_ltm_last = model_ltm_last @ differentiation_matrix.T
+        correction_models[partial_name] = derivative_ltm_last.swapaxes(3, -1)
+
+
 def encode_tide_correction_models(
     path: Path = TIDE_BINARY_FILES_PATH,
     steady_state_signal_parameters: SteadyStateSignalParameters = DEFAULT_SIGNAL_PARAMETERS,
@@ -631,6 +694,10 @@ def encode_tide_correction_models(
                 s_21_reference - all_correction_models[correction_type][..., :1]
             )
 
+    replace_ltm_partials_with_global_lagrange_derivatives(
+        ltm_values=tabs[INVERTED_NAMES_MAP["ltm"]],
+        correction_models=all_correction_models,
+    )
     path.mkdir(parents=True, exist_ok=True)
     save_tabs(
         dates=pole_motion.dates,
