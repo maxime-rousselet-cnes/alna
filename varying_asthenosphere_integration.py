@@ -1,5 +1,5 @@
 """
-Tests the consistency of integration. To test via pytest integration_tests.py.
+TODO: Describe.
 """
 
 from argparse import ArgumentParser, Namespace
